@@ -76,23 +76,45 @@ Before doing ANY work, present the user with a clear execution plan:
 6. **Wait for user approval** — do NOT proceed until the user confirms the plan
 7. If the user requests changes, adjust and re-present
 
-### Step 2: Execute with agent teams
+### Step 1.5: Create a working branch
 
-Once approved, execute the plan:
+Before executing any work, create a branch following this convention:
 
-1. **Use agent teams for parallel waves** — spawn teammates for all agents in a wave so they run concurrently. Agent teams are the preferred execution mode whenever 2+ agents can run in parallel.
-2. **Use subagents only for sequential single-agent tasks** (e.g., reviewer after all implementation is done)
-3. **Collect responses** — every agent returns the standard output format (see below)
-4. **Run reviewer** on completed work if the phase warrants it
-5. **Run test** to validate the work
-6. **Report a rollup** to the main context
+- **Plan-based work**: `feat/<NNN>-<plan-name>` (from `docs/plans/<NNN>-<plan-name>.md`)
+  - Example: `feat/001-langgraph-introduction`
+- **Chore/refactor**: `chore/<short-description>`
+- **Bug fix**: `bug/<short-description>`
 
-### Choosing agent teams vs subagents
+Confirm the branch name with the user before creating it. Do NOT proceed until the user approves.
 
-- **2+ agents with no file overlaps** → agent team (parallel teammates)
-- **Single agent task** → subagent
-- **Sequential dependency chain** → subagents in sequence
-- **When in doubt, prefer agent teams** — parallelism is the goal
+### Step 2: Execute with git worktrees
+
+Once approved, execute the plan using **git worktree isolation** for all parallel agents:
+
+1. **Spawn parallel agents with `isolation: "worktree"`** — each agent gets its own copy of the repo, so there are zero file conflicts. This is the default for all parallel waves.
+2. **Collect worktree results** — agents that make changes return a worktree path and branch name. Merge their branches into the working branch sequentially.
+3. **Use non-isolated agents only for sequential single-agent tasks** that need to see prior agents' merged output (e.g., reviewer after all implementation is done).
+4. **Run reviewer** on completed work if the phase warrants it.
+5. **Run test** to validate the work.
+6. **Report a rollup** to the main context.
+
+### Merge strategy
+
+After a parallel wave completes:
+1. Switch to the working branch (e.g., `feat/001-langgraph-introduction`)
+2. Merge each agent's worktree branch one at a time — resolve conflicts if any
+3. Verify the merge is clean before starting the next wave
+
+### Choosing worktrees vs agent teams
+
+| Mode | When | How |
+|------|------|-----|
+| **Worktrees** | Implementation — agents writing code to different files | `isolation: "worktree"` on each `Agent()` call |
+| **Agent teams** | Exploration/research — agents sharing context, no file writes | `TeamCreate` with multiple teammates |
+
+- **Default to worktrees** for implementation waves
+- **Use agent teams** for research, experimentation, brainstorming, or when agents need to see each other's findings in real time
+- **Reviewer and test agents** run directly on the merged working branch (no worktree, no team) — they need to see all changes
 
 ## Spawning Agents
 
@@ -102,13 +124,17 @@ When spawning a specialist, always include in the prompt:
 - Any dependencies on other agents' output
 - A reminder to return the standard output format
 
-Example:
+Always use `isolation: "worktree"` for parallel agents. Example:
 ```
-Spawn the `config` agent:
-"Implement Phase 1, Step 2 from docs/plans/001-langgraph-introduction.md.
-Create src/app/shared/ with config.py, llm.py, logging.py, and di.py.
-Follow .claude/rules/code-conventions.md and .claude/rules/logging.md.
-Return your response in the standard agent output JSON format."
+Agent({
+  description: "Config agent — shared layer",
+  isolation: "worktree",
+  model: "sonnet",
+  prompt: "Implement Phase 1, Step 2 from docs/plans/001-langgraph-introduction.md.
+    Create src/app/shared/ with config.py, llm.py, logging.py, and di.py.
+    Follow .claude/rules/code-conventions.md and .claude/rules/logging.md.
+    Return your response in the standard agent output JSON format."
+})
 ```
 
 ## Conflict Detection
