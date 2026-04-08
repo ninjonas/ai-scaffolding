@@ -1,18 +1,73 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
+import structlog
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-app = FastAPI(title="Scaffolding API")
+from app.api.router import api_router
+from app.infrastructure.database import create_engine, create_session_factory, init_database
+from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
+from app.service.chat import ChatService
+from app.shared.config import Settings
+from app.shared.di import Container
+from app.shared.llm import create_llm
+from app.shared.logging import configure_logging
+
+log = structlog.get_logger()
 
 WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 
+settings = Settings()
+_container: Container | None = None
 
-@app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _container
+
+    configure_logging(log_level=settings.log_level, log_json=settings.log_json)
+    log.info("app_starting", log_level=settings.log_level)
+
+    engine = create_engine(settings.database_url)
+    await init_database(engine)
+    session_factory = create_session_factory(engine)
+
+    llm = create_llm(settings)
+
+    from app.agents.supervisor.graph import create_supervisor_graph
+
+    agent_graph = create_supervisor_graph(llm)
+    uow = SQLAlchemyUnitOfWork(session_factory)
+    chat_service = ChatService(agent_graph=agent_graph, unit_of_work=uow)
+
+    _container = Container(settings=settings)
+    _container._register("chat_service", chat_service)
+
+    import app.shared.di as di_module
+
+    di_module._container = _container
+
+    log.info("app_started")
+    yield
+
+    await engine.dispose()
+    log.info("app_stopped")
+
+
+app = FastAPI(title="Scaffolding API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(api_router)
 
 if WEB_DIST.is_dir():
     app.mount("/assets", StaticFiles(directory=WEB_DIST / "assets"), name="assets")

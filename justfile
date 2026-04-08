@@ -83,6 +83,10 @@ check-di *args:
 check-literal-strings *args:
     just -f scripts/check.just literal-strings {{args}}
 
+# ── Code generation ───────────────────────────────
+gen-types:
+    just -f scripts/gen.just types
+
 # ── Git Hooks ─────────────────────────────────────
 git-pre-commit:
     just -f scripts/git.just pre-commit

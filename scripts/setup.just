@@ -1,7 +1,10 @@
 set working-directory := '..'
 
-all: brew python node git-hooks
+all: dirs brew python node git-hooks
     @echo "Setup complete."
+
+dirs:
+    mkdir -p data logs
 
 brew:
     brew install uv node pnpm gh

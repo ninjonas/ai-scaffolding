@@ -39,3 +39,8 @@ tmp/*
 !tmp/.gitkeep
 logs/*
 !logs/.gitkeep
+data/*
+!data/.gitkeep
+
+# Database
+*.db

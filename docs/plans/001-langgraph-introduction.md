@@ -4,6 +4,19 @@
 **Date**: 2026-04-07
 **Author**: Claude + Jonas
 
+## Progress
+
+- [x] **Phase 1**: Foundation — deps added, `src/app/shared/` created (config, llm, logging, di), `.env.example` updated
+- [x] **Phase 2**: Agent system — prompts, skill loader, 4 starter skills, rules, shared image tool
+- [x] **Phase 4**: Domain + service — entities (Message, Conversation), value objects (OptimizedImage), repository protocol, ChatService
+- [x] **Phase 7**: Just recipes — `scripts/gen.just` + `gen-types` recipe, setup dirs, `.gitignore` updated
+- [x] **Phase 1b**: Persistence layer — database.py, ORM models, data mapper, SQLConversationRepository, SQLAlchemyUnitOfWork
+- [x] **Phase 3**: Agents — chatbot (all tools), researcher (web search), supervisor (LLM router)
+- [x] **Phase 5**: API layer — DTOs (camelCase), ChatMapper, routes (health + chat), main.py rewritten with lifespan
+- [x] **Phase 6**: Frontend chat UI — Chat, ChatInput, MessageBubble components, image upload, tool call display
+
+*Note: Phase 7 rules/skills creation skipped — Claude rules already existed in `.claude/rules/`.*
+
 ## Overview
 
 Add a LangGraph-based agent system to the scaffolding project, with a starter chatbot that analyzes images, uses tools, and delegates to subagents. The architecture follows PofEAA patterns (service layer, repository, data mapper, DTOs) and mimics Claude Code's `.claude/` pattern for prompt/skill/rule management.

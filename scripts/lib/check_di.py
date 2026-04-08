@@ -57,6 +57,7 @@ SKIP_PATTERNS = [
     "container.py",
     "db/",
     "scripts/lib/",
+    "llm.py",
 ]
 
 

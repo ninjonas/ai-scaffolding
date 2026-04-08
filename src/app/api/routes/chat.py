@@ -1,0 +1,46 @@
+from typing import Annotated
+
+import structlog
+from fastapi import APIRouter, Depends
+
+from app.api.dto.chat import ChatRequestDTO, ChatResponseDTO
+from app.api.mappers.chat import ChatMapper
+from app.service.chat import ChatService
+
+log = structlog.get_logger()
+
+router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+
+def get_chat_service() -> ChatService:
+    from app.shared.di import _container
+
+    return _container.chat_service
+
+
+ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+
+
+@router.post("", response_model=ChatResponseDTO)
+async def send_message(
+    request: ChatRequestDTO,
+    chat_service: ChatServiceDep,
+) -> ChatResponseDTO:
+    log.info(
+        "chat_request",
+        conversation_id=request.conversation_id,
+        has_images=bool(request.images),
+    )
+
+    response_message = await chat_service.send_message(
+        content=request.message,
+        conversation_id=request.conversation_id,
+        images=request.images,
+    )
+
+    dto = ChatMapper.to_response_dto(
+        response_message,
+        conversation_id=response_message.conversation_id,
+    )
+    log.info("chat_response_sent", conversation_id=dto.conversation_id)
+    return dto
