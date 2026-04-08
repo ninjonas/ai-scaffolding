@@ -4,7 +4,7 @@ all: brew python node git-hooks
     @echo "Setup complete."
 
 brew:
-    brew install uv node pnpm
+    brew install uv node pnpm gh
 
 python:
     uv sync --extra dev
