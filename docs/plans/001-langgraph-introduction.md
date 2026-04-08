@@ -1,6 +1,6 @@
 # Plan: Introduce LangGraph & LangChain to Scaffolding
 
-**Status**: In Progress
+**Status**: Done
 **Date**: 2026-04-07
 **Author**: Claude + Jonas
 
