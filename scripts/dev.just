@@ -31,9 +31,12 @@ kill port:
 
 # Start API + web dev servers
 start:
-    rm -f logs/*
-    uv run uvicorn app.main:app --reload --host 0.0.0.0 --port {{API_PORT}} &
-    cd src/web && pnpm run dev --port {{WEB_PORT}} &
+    #!/usr/bin/env bash
+    rm -f logs/api.log logs/web.log
+    nohup uv run uvicorn app.main:app --reload --host 0.0.0.0 --port {{API_PORT}} > logs/api.log 2>&1 &
+    echo "API server started on port {{API_PORT}} (PID $!)"
+    nohup sh -c 'cd src/web && pnpm run dev --port {{WEB_PORT}}' > logs/web.log 2>&1 &
+    echo "Web server started on port {{WEB_PORT}} (PID $!)"
 
 # Stop dev servers
 stop:

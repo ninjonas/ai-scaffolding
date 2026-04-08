@@ -6,7 +6,10 @@ DOCS_PORT := env("DOCS_PORT", "8100")
 
 # Start MkDocs dev server
 start *args:
-    uv run mkdocs serve -a localhost:{{DOCS_PORT}} {{args}} &
+    #!/usr/bin/env bash
+    rm -f logs/docs.log
+    nohup uv run mkdocs serve -a localhost:{{DOCS_PORT}} {{args}} > logs/docs.log 2>&1 &
+    echo "Docs server started on port {{DOCS_PORT}} (PID $!)"
 
 # Stop docs server
 stop:

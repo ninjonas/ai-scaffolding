@@ -94,6 +94,10 @@ git-pre-push:
 kill port:
     just -f scripts/dev.just kill {{port}}
 
+# ── Clean ─────────────────────────────────────────
+bsc:
+    just -f scripts/clean.just bsc
+
 # ── Setup ─────────────────────────────────────────
 setup:
     just -f scripts/setup.just all
