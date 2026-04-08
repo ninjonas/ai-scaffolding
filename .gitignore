@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+dist/
+*.egg-info/
+.uv/
+
+# Node
+node_modules/
+
+# Build output
+src/web/dist/
+site/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Coverage
+.coverage
+htmlcov/
+coverage/
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Project dirs (keep dir, ignore contents)
+tmp/*
+!tmp/.gitkeep
+logs/*
+!logs/.gitkeep

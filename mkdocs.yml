@@ -1,0 +1,26 @@
+site_name: Scaffolding
+site_description: A monorepo with a Python (FastAPI) backend and a Vite React TypeScript frontend
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+docs_dir: docs
+site_dir: site
+
+nav:
+  - Home: index.md
+  - Setup: SETUP.md
+
+markdown_extensions:
+  - tables
+  - fenced_code
+  - codehilite
