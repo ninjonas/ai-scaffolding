@@ -4,8 +4,12 @@ set working-directory := '..'
 
 DOCS_PORT := env("DOCS_PORT", "8100")
 
+# Sync .claude/rules/ into docs/guidelines/
+sync-guidelines:
+    bash scripts/lib/sync-guidelines.sh
+
 # Start MkDocs dev server
-start *args:
+start *args: sync-guidelines
     #!/usr/bin/env bash
     rm -f logs/docs.log
     nohup uv run mkdocs serve -a localhost:{{DOCS_PORT}} {{args}} > logs/docs.log 2>&1 &
@@ -21,5 +25,5 @@ restart:
     just -f {{justfile()}} start
 
 # Build docs
-build *args:
+build *args: sync-guidelines
     uv run mkdocs build {{args}}

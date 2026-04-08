@@ -19,6 +19,44 @@ site_dir: site
 nav:
   - Home: index.md
   - Setup: SETUP.md
+  # BEGIN GENERATED NAV
+  - Guidelines:
+      - Overview: guidelines/index.md
+      - Agent Conventions: guidelines/agent-conventions.md
+      - Architecture Principles: guidelines/architecture.md
+      - Code Conventions: guidelines/code-conventions.md
+      - Conventions: guidelines/conventions.md
+      - Common commands: guidelines/dev-workflow.md
+      - Documents: guidelines/documents.md
+      - Git commit messages: guidelines/git-commits.md
+      - Justfile Conventions: guidelines/justfile-conventions.md
+      - Logging Enforcement: guidelines/logging-enforcement.md
+      - Logging: guidelines/logging.md
+      - Plan Documents: guidelines/plan-documents.md
+      - Project structure: guidelines/project-structure.md
+  - Agents:
+      - Overview: agents/index.md
+      - API Agent: agents/api.md
+      - Config Agent: agents/config.md
+      - Database Agent: agents/database.md
+      - Graphs Agent: agents/graphs.md
+      - Prompts Agent: agents/prompts.md
+      - Recipes Agent: agents/recipes.md
+      - Reviewer Agent: agents/reviewer.md
+      - Supervisor: agents/supervisor.md
+      - Test Agent: agents/test.md
+      - UI Agent: agents/ui.md
+  - Skills:
+      - Overview: skills/index.md
+      - Steps: skills/add-just-recipe.md
+      - Check — Convention Checks: skills/check.md
+      - dev: skills/dev.md
+      - docs: skills/docs.md
+      - format: skills/format.md
+      - lint: skills/lint.md
+      - setup: skills/setup.md
+      - test: skills/test.md
+  # END GENERATED NAV
 
 markdown_extensions:
   - tables

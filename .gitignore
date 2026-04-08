@@ -13,6 +13,9 @@ node_modules/
 # Build output
 src/web/dist/
 site/
+docs/guidelines/
+docs/agents/
+docs/skills/
 
 # Environment
 .env
