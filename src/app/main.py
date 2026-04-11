@@ -40,27 +40,37 @@ async def lifespan(app: FastAPI):
     llm = create_llm(settings)
 
     from app.agents.supervisor.graph import create_supervisor_graph
-    from app.agents.tools.knowledge import make_read_knowledge_file_tool
-    from app.infrastructure.repositories.knowledge_file import SQLKnowledgeFileRepository
+    from app.agents.tools.knowledge import make_search_knowledge_tool
+    from app.agents.tools.memory import make_search_memory_tool
+    from app.infrastructure.vector.client import get_chroma_client
+    from app.infrastructure.vector.knowledge_indexer import KnowledgeIndexer
+    from app.infrastructure.vector.knowledge_searcher import KnowledgeSearcher
+    from app.infrastructure.vector.memory_searcher import MemorySearcher
 
     def knowledge_uow_factory() -> SQLAlchemyUnitOfWork:
         return SQLAlchemyUnitOfWork(session_factory)
-
-    def make_knowledge_repo() -> SQLKnowledgeFileRepository:
-        return SQLKnowledgeFileRepository(session_factory())
 
     from app.shared.checkpointer import get_checkpointer
 
     checkpointer = await get_checkpointer(settings)
 
-    read_knowledge_file = make_read_knowledge_file_tool(make_knowledge_repo)
+    chroma_client = get_chroma_client(settings)
+    knowledge_indexer = KnowledgeIndexer(chroma_client, settings)
+    knowledge_searcher = KnowledgeSearcher(chroma_client, settings)
+    memory_searcher = MemorySearcher(chroma_client, settings)
+
+    search_knowledge = make_search_knowledge_tool(knowledge_searcher)
+    search_memory = make_search_memory_tool(memory_searcher)
+
     agent_graph = create_supervisor_graph(
-        llm, extra_tools=[read_knowledge_file], checkpointer=checkpointer
+        llm, extra_tools=[search_knowledge, search_memory], checkpointer=checkpointer
     )
     orchestrator = AgentOrchestrator(agent_graph)
     broker = AgentBroker(orchestrator)
     uow = SQLAlchemyUnitOfWork(session_factory)
-    knowledge_service = KnowledgeService(uow_factory=knowledge_uow_factory, llm=llm)
+    knowledge_service = KnowledgeService(
+        uow_factory=knowledge_uow_factory, llm=llm, indexer=knowledge_indexer
+    )
     chat_service = ChatService(
         broker=broker, unit_of_work=uow, knowledge_service=knowledge_service
     )

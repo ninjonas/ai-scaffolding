@@ -122,3 +122,7 @@ setup-statusbar:
 # ── Fork ──────────────────────────────────────
 fork *args:
     just -f scripts/fork.just fork {{args}}
+
+# ── ChromaDB ──────────────────────────────────────
+chroma-backfill *args:
+    just -f scripts/setup.just chroma-backfill {{args}}

@@ -29,7 +29,6 @@ class AgentBroker:
         self,
         content: str,
         images: list[str] | None = None,
-        knowledge_catalog: str = "",
         conversation_id: str | None = None,
         **context: Any,
     ) -> dict:
@@ -38,7 +37,6 @@ class AgentBroker:
         Args:
             content: User message text.
             images: Optional list of base64-encoded images.
-            knowledge_catalog: Pre-formatted knowledge catalog string for prompt injection.
             conversation_id: Optional conversation ID; used as LangGraph thread_id.
             **context: Additional context forwarded as structured log fields.
 
@@ -48,7 +46,6 @@ class AgentBroker:
         state_dict = {
             "messages": [{"role": "user", "content": content}],
             "images": images or [],
-            "knowledge_catalog": knowledge_catalog,
         }
         config = {"configurable": {"thread_id": conversation_id}} if conversation_id else None
         return await self._orchestrator.invoke_with_telemetry(

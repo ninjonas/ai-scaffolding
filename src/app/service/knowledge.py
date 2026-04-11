@@ -1,14 +1,11 @@
 from collections.abc import Callable
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 from langchain_core.language_models import BaseChatModel
 
-from app.domain.entities.knowledge_file import (
-    SCOPE_CONVERSATION,
-    KnowledgeFile,
-)
-from app.infrastructure.mappers.knowledge_file import KnowledgeFileDataMapper
+from app.domain.entities.knowledge_file import SCOPE_CONVERSATION, KnowledgeFile
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from app.service.knowledge_frontmatter import detect_file_type, generate, is_image
 from app.service.knowledge_frontmatter_llm import llm_describe_image, llm_generate
@@ -26,9 +23,20 @@ class KnowledgeService:
         self,
         uow_factory: Callable[[], SQLAlchemyUnitOfWork],
         llm: BaseChatModel | None = None,
+        indexer: Any | None = None,
     ) -> None:
         self._uow_factory = uow_factory
         self._llm = llm
+        self._indexer = indexer
+
+    async def _index(self, file: KnowledgeFile) -> None:
+        if self._indexer is None:
+            return
+        log.info("knowledge_index_start", file_id=file.id)
+        chunks = await self._indexer.index(
+            file.id, file.name, file.content, file.file_type, file.scope, file.conversation_id
+        )
+        log.info("knowledge_index_done", file_id=file.id, chunk_count=chunks)
 
     async def upload(
         self,
@@ -37,26 +45,17 @@ class KnowledgeService:
         scope: str,
         conversation_id: str | None = None,
     ) -> KnowledgeFile:
-        log.info(
-            "knowledge_upload_start",
-            filename=filename,
-            scope=scope,
-            conversation_id=conversation_id,
-        )
-
+        log.info("knowledge_upload_start", filename=filename, scope=scope)
         file_type = detect_file_type(filename)
-
         if not is_image(file_type) and len(content.encode("utf-8")) > MAX_FILE_SIZE_BYTES:
             raise ValueError(f"File exceeds {MAX_FILE_SIZE_BYTES // 1024}KB limit")
-
         async with self._uow_factory() as uow:
             existing = await uow.knowledge.list(scope=scope, conversation_id=conversation_id)
             limit = MAX_CONVERSATION_FILES if scope == SCOPE_CONVERSATION else MAX_PROJECT_FILES
             if len(existing) >= limit:
                 raise ValueError(f"File limit reached: max {limit} files for scope '{scope}'")
-
             name, description, tags = generate(filename, content, file_type)
-            knowledge_file = KnowledgeFile(
+            kf = KnowledgeFile(
                 name=name,
                 filename=filename,
                 description=description,
@@ -66,19 +65,11 @@ class KnowledgeService:
                 tags=tags,
                 conversation_id=conversation_id,
             )
-
-            await uow.knowledge.save(knowledge_file)
+            await uow.knowledge.save(kf)
             await uow.commit()
-
-        log.info(
-            "knowledge_upload_complete",
-            file_id=knowledge_file.id,
-            name=knowledge_file.name,
-            file_type=file_type,
-            scope=scope,
-            tag_count=len(tags),
-        )
-        return knowledge_file
+        log.info("knowledge_upload_complete", file_id=kf.id, name=kf.name, scope=scope)
+        await self._index(kf)
+        return kf
 
     async def update(
         self,
@@ -89,12 +80,10 @@ class KnowledgeService:
         content: str | None = None,
     ) -> KnowledgeFile:
         log.info("knowledge_update_start", file_id=file_id)
-
         async with self._uow_factory() as uow:
             existing = await uow.knowledge.get_by_id(file_id)
             if existing is None:
                 raise ValueError(ERR_FILE_NOT_FOUND + file_id)
-
             updated = KnowledgeFile(
                 id=existing.id,
                 name=name if name is not None else existing.name,
@@ -108,11 +97,12 @@ class KnowledgeService:
                 created_at=existing.created_at,
                 updated_at=datetime.now(UTC),
             )
-
             await uow.knowledge.save(updated)
             await uow.commit()
-
         log.info("knowledge_update_complete", file_id=file_id, name=updated.name)
+        if content is not None and self._indexer is not None:
+            await self._indexer.delete(file_id)
+            await self._index(updated)
         return updated
 
     async def get(self, file_id: str) -> KnowledgeFile | None:
@@ -128,6 +118,8 @@ class KnowledgeService:
                 raise ValueError(ERR_FILE_NOT_FOUND + file_id)
             await uow.knowledge.delete(file_id)
             await uow.commit()
+        if self._indexer is not None:
+            await self._indexer.delete(file_id)
         log.info("knowledge_delete_complete", file_id=file_id)
 
     async def list(
@@ -139,16 +131,6 @@ class KnowledgeService:
         async with self._uow_factory() as uow:
             return await uow.knowledge.list(scope=scope, conversation_id=conversation_id)
 
-    async def get_catalog(
-        self,
-        scope: str | None = None,
-        conversation_id: str | None = None,
-    ) -> list[dict]:
-        log.debug("knowledge_get_catalog", scope=scope, conversation_id=conversation_id)
-        async with self._uow_factory() as uow:
-            files = await uow.knowledge.list(scope=scope, conversation_id=conversation_id)
-        return [KnowledgeFileDataMapper.to_catalog_dict(f) for f in files]
-
     async def enrich_metadata(self, file_id: str) -> None:
         log.info("knowledge_enrich_start", file_id=file_id)
         try:
@@ -157,38 +139,33 @@ class KnowledgeService:
                 if file is None:
                     log.warning("knowledge_enrich_skip", file_id=file_id, reason="not_found")
                     return
-
-            if self._llm is not None and is_image(file.file_type):
-                name, description, tags = await llm_describe_image(
-                    file.content, file.file_type, self._llm
-                )
-            elif self._llm is not None:
-                name, description, tags = await llm_generate(
-                    file.content, file.file_type, self._llm
-                )
-            else:
-                name, description, tags = "", "", []
-
+            name, description, tags = await self._generate_enrichment(file)
             async with self._uow_factory() as uow:
                 existing = await uow.knowledge.get_by_id(file_id)
                 if existing is not None:
-                    updated = KnowledgeFile(
+                    enriched = KnowledgeFile(
                         id=existing.id,
-                        name=name if name else existing.name,
+                        name=name or existing.name,
                         filename=existing.filename,
-                        description=description if description else existing.description,
+                        description=description or existing.description,
                         content=existing.content,
                         file_type=existing.file_type,
                         scope=existing.scope,
-                        tags=tags if tags else existing.tags,
+                        tags=tags or existing.tags,
                         enriched=True,
                         conversation_id=existing.conversation_id,
                         created_at=existing.created_at,
                         updated_at=datetime.now(UTC),
                     )
-                    await uow.knowledge.save(updated)
+                    await uow.knowledge.save(enriched)
                     await uow.commit()
-
             log.info("knowledge_enrich_done", file_id=file_id, llm_used=bool(name))
         except Exception as exc:
             log.warning("knowledge_enrich_error", file_id=file_id, error=str(exc), exc_info=exc)
+
+    async def _generate_enrichment(self, file: KnowledgeFile) -> tuple[str, str, list[str]]:
+        if self._llm is not None and is_image(file.file_type):
+            return await llm_describe_image(file.content, file.file_type, self._llm)
+        if self._llm is not None:
+            return await llm_generate(file.content, file.file_type, self._llm)
+        return "", "", []

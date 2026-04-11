@@ -1,101 +1,45 @@
 import pytest
 
-from app.agents.tools.knowledge import build_knowledge_catalog, make_read_knowledge_file_tool
-from app.domain.entities.knowledge_file import SCOPE_PROJECT, KnowledgeFile
-from app.shared.field_keys import FIELD_KEY_DESCRIPTION, FIELD_KEY_NAME
-
-_FILE_TYPE_MD = "md"
-
-_ENTRY = {
-    FIELD_KEY_NAME: "My Doc",
-    "file_type": _FILE_TYPE_MD,
-    "scope": SCOPE_PROJECT,
-    FIELD_KEY_DESCRIPTION: "A useful document",
-    "id": "abc-123",
-}
+from app.agents.tools.knowledge import make_search_knowledge_tool
+from app.domain.entities.knowledge_file import SCOPE_PROJECT
 
 
-# -- build_knowledge_catalog --
+class _FakeSearcher:
+    def __init__(self, results: list[dict]):
+        self._results = results
+
+    async def search(
+        self, query: str, scope: str, conversation_id: str | None = None, top_k: int = 5
+    ) -> list[dict]:
+        return self._results
 
 
-def test_build_knowledge_catalog_empty_returns_empty_string():
-    assert build_knowledge_catalog([]) == ""
+@pytest.mark.asyncio
+async def test_search_knowledge_returns_formatted_results():
+    results = [{"name": "My Doc", "score": 0.92, "excerpt": "Some relevant text"}]
+    tool = make_search_knowledge_tool(_FakeSearcher(results))
+    output = await tool.ainvoke({"query": "test query"})
+    assert "My Doc" in output
+    assert "0.92" in output
+    assert "Some relevant text" in output
 
 
-def test_build_knowledge_catalog_includes_header():
-    result = build_knowledge_catalog([_ENTRY])
-    assert "## Knowledge Base" in result
+@pytest.mark.asyncio
+async def test_search_knowledge_empty_returns_no_results_message():
+    tool = make_search_knowledge_tool(_FakeSearcher([]))
+    output = await tool.ainvoke({"query": "test query"})
+    assert "No relevant documents found" in output
 
 
-def test_build_knowledge_catalog_includes_file_name():
-    result = build_knowledge_catalog([_ENTRY])
-    assert "My Doc" in result
-
-
-def test_build_knowledge_catalog_includes_file_type():
-    result = build_knowledge_catalog([_ENTRY])
-    assert _FILE_TYPE_MD in result
-
-
-def test_build_knowledge_catalog_includes_scope():
-    result = build_knowledge_catalog([_ENTRY])
-    assert SCOPE_PROJECT in result
-
-
-def test_build_knowledge_catalog_includes_description():
-    result = build_knowledge_catalog([_ENTRY])
-    assert "A useful document" in result
-
-
-def test_build_knowledge_catalog_includes_id():
-    result = build_knowledge_catalog([_ENTRY])
-    assert "abc-123" in result
-
-
-def test_build_knowledge_catalog_multiple_entries():
-    entries = [
-        {**_ENTRY, FIELD_KEY_NAME: "Doc A", "id": "id-a"},
-        {**_ENTRY, FIELD_KEY_NAME: "Doc B", "id": "id-b"},
+@pytest.mark.asyncio
+async def test_search_knowledge_multiple_results_ranked():
+    results = [
+        {"name": "Doc A", "score": 0.9, "excerpt": "First result"},
+        {"name": "Doc B", "score": 0.7, "excerpt": "Second result"},
     ]
-    result = build_knowledge_catalog(entries)
-    assert "Doc A" in result
-    assert "Doc B" in result
-
-
-# -- make_read_knowledge_file_tool --
-
-
-class _FakeRepo:
-    def __init__(self, files: dict[str, KnowledgeFile]):
-        self._files = files
-
-    async def get_by_id(self, file_id: str) -> KnowledgeFile | None:
-        return self._files.get(file_id)
-
-
-def _make_file(file_id: str, content: str) -> KnowledgeFile:
-    return KnowledgeFile(
-        id=file_id,
-        name="Test",
-        description="",
-        content=content,
-        file_type=_FILE_TYPE_MD,
-        scope=SCOPE_PROJECT,
-    )
-
-
-@pytest.mark.asyncio
-async def test_read_knowledge_file_returns_content():
-    kf = _make_file("f1", "hello world")
-    repo = _FakeRepo({"f1": kf})
-    tool = make_read_knowledge_file_tool(lambda: repo)
-    result = await tool.ainvoke({"file_id": "f1"})
-    assert result == "hello world"
-
-
-@pytest.mark.asyncio
-async def test_read_knowledge_file_not_found_returns_message():
-    repo = _FakeRepo({})
-    tool = make_read_knowledge_file_tool(lambda: repo)
-    result = await tool.ainvoke({"file_id": "missing"})
-    assert "not found" in result.lower()
+    tool = make_search_knowledge_tool(_FakeSearcher(results))
+    output = await tool.ainvoke({"query": "test query", "scope": SCOPE_PROJECT})
+    assert "1." in output
+    assert "2." in output
+    assert "Doc A" in output
+    assert "Doc B" in output
