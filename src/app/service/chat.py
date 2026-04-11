@@ -5,13 +5,12 @@ import structlog
 from app.agents.orchestrator import AgentBroker
 from app.agents.tools.knowledge import build_knowledge_catalog
 from app.domain.entities.conversation import Conversation
+from app.domain.entities.knowledge_file import SCOPE_CONVERSATION, SCOPE_PROJECT
 from app.domain.entities.message import Message, MessageRole
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
-from app.service.knowledge import SCOPE_CONVERSATION, KnowledgeService
+from app.service.knowledge import KnowledgeService
 
 log = structlog.get_logger()
-
-SCOPE_PROJECT = "project"
 
 
 class ChatService:

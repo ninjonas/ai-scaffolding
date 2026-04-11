@@ -2,11 +2,13 @@ from collections.abc import Callable
 from datetime import datetime
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.entities.knowledge_file import KnowledgeFile
+from app.domain.entities.knowledge_file import (
+    SCOPE_CONVERSATION,
+    KnowledgeFile,
+)
 from app.domain.repositories.knowledge_file import KnowledgeFileRepository
-from app.infrastructure.repositories.knowledge_file import SQLKnowledgeFileRepository
+from app.infrastructure.mappers.knowledge_file import KnowledgeFileDataMapper
 from app.service.knowledge_frontmatter import detect_file_type, generate
 
 log = structlog.get_logger()
@@ -14,17 +16,15 @@ log = structlog.get_logger()
 MAX_FILE_SIZE_BYTES = 500 * 1024  # 500KB
 MAX_PROJECT_FILES = 50
 MAX_CONVERSATION_FILES = 20
-SCOPE_CONVERSATION = "conversation"
 ERR_FILE_NOT_FOUND = "Knowledge file not found: "
 
 
 class KnowledgeService:
-    def __init__(self, session_factory: Callable[[], AsyncSession]) -> None:
-        self._session_factory = session_factory
+    def __init__(self, repo_factory: Callable[[], KnowledgeFileRepository]) -> None:
+        self._repo_factory = repo_factory
 
     def _repo(self) -> KnowledgeFileRepository:
-        """Create a repository backed by a new session."""
-        return SQLKnowledgeFileRepository(self._session_factory())
+        return self._repo_factory()
 
     async def upload(
         self,
@@ -130,14 +130,4 @@ class KnowledgeService:
     ) -> list[dict]:
         log.debug("knowledge_get_catalog", scope=scope, conversation_id=conversation_id)
         files = await self._repo().list(scope=scope, conversation_id=conversation_id)
-        return [
-            {
-                "id": f.id,
-                "name": f.name,
-                "description": f.description,
-                "tags": f.tags,
-                "file_type": f.file_type,
-                "scope": f.scope,
-            }
-            for f in files
-        ]
+        return [KnowledgeFileDataMapper.to_catalog_dict(f) for f in files]

@@ -1,8 +1,6 @@
 from datetime import datetime
 
-from app.domain.entities.knowledge_file import KnowledgeFile
-from app.service.chat import SCOPE_PROJECT
-from app.service.knowledge import SCOPE_CONVERSATION
+from app.domain.entities.knowledge_file import SCOPE_CONVERSATION, SCOPE_PROJECT, KnowledgeFile
 
 _FILE_TYPE_MD = "md"
 _FILE_TYPE_JSON = "json"

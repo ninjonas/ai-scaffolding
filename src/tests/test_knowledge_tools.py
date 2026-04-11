@@ -1,8 +1,7 @@
 import pytest
 
 from app.agents.tools.knowledge import build_knowledge_catalog, make_read_knowledge_file_tool
-from app.domain.entities.knowledge_file import KnowledgeFile
-from app.service.chat import SCOPE_PROJECT
+from app.domain.entities.knowledge_file import SCOPE_PROJECT, KnowledgeFile
 from app.shared.field_keys import FIELD_KEY_DESCRIPTION, FIELD_KEY_NAME
 
 _FILE_TYPE_MD = "md"

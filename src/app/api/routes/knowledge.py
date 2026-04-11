@@ -8,7 +8,7 @@ from app.api.dto.knowledge import (
     KnowledgeFileUpdateDTO,
     KnowledgeFileUploadDTO,
 )
-from app.infrastructure.mappers.knowledge_file import KnowledgeFileDataMapper
+from app.api.mappers.knowledge_file import KnowledgeFileApiMapper
 from app.service.knowledge import KnowledgeService
 
 log = structlog.get_logger()
@@ -44,7 +44,7 @@ async def upload_file(
         scope=request.scope,
         conversation_id=request.conversation_id,
     )
-    dto = KnowledgeFileDataMapper.to_response_dto(entity)
+    dto = KnowledgeFileApiMapper.to_response_dto(entity)
     log.info("knowledge_upload_response", file_id=dto.id)
     return dto
 
@@ -63,7 +63,7 @@ async def list_files(
         conversation_id=conversation_id,
     )
     entities = await knowledge_service.list(scope=scope, conversation_id=conversation_id)
-    return [KnowledgeFileDataMapper.to_response_dto(e) for e in entities]
+    return [KnowledgeFileApiMapper.to_response_dto(e) for e in entities]
 
 
 @router.get("/{file_id}", response_model=KnowledgeFileResponseDTO)
@@ -77,7 +77,7 @@ async def get_file(
         from fastapi import HTTPException
 
         raise HTTPException(status_code=404, detail=f"Knowledge file not found: {file_id}")
-    dto = KnowledgeFileDataMapper.to_response_dto(entity)
+    dto = KnowledgeFileApiMapper.to_response_dto(entity)
     log.info("knowledge_get_response", file_id=file_id)
     return dto
 
@@ -98,7 +98,7 @@ async def update_file(
         tags=request.tags,
         content=request.content,
     )
-    dto = KnowledgeFileDataMapper.to_response_dto(entity)
+    dto = KnowledgeFileApiMapper.to_response_dto(entity)
     log.info("knowledge_update_response", file_id=file_id)
     return dto
 

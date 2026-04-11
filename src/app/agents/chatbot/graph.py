@@ -10,13 +10,14 @@ from app.agents.constants import NODE_END, NODE_LLM, NODE_TOOLS
 log = structlog.get_logger()
 
 
-def create_chatbot_graph(llm: ChatOpenAI) -> StateGraph:
+def create_chatbot_graph(llm: ChatOpenAI, extra_tools: list | None = None) -> StateGraph:
     log.info("creating_chatbot_graph")
 
-    tool_node = ToolNode(ALL_TOOLS)
+    all_tools = ALL_TOOLS + (extra_tools or [])
+    tool_node = ToolNode(all_tools)
 
     async def llm_node(state: ChatbotState) -> dict:
-        return await invoke_llm(state, llm)
+        return await invoke_llm(state, llm, extra_tools=extra_tools)
 
     graph = StateGraph(ChatbotState)
     graph.add_node(NODE_LLM, llm_node)

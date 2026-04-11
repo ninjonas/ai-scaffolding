@@ -24,11 +24,11 @@ Usage:
     check_mapper_patterns.py [--dir <path>]   # check specific directory
     check_mapper_patterns.py                   # check api/ and service/ files
 """
+
 import ast
 import re
 import sys
 from pathlib import Path
-from typing import Optional
 
 RED = "\033[0;31m"
 YELLOW = "\033[1;33m"
@@ -111,9 +111,9 @@ class MapperPatternChecker(ast.NodeVisitor):
             if isinstance(node, ast.Dict):
                 source_line = self._get_source_line(node.lineno)
                 # Skip if it's in a type hint or logging context
-                if not self._is_type_hint_context(
-                    node
-                ) and not self._is_logging_context(source_line):
+                if not self._is_type_hint_context(node) and not self._is_logging_context(
+                    source_line
+                ):
                     self._add_violation(
                         node.lineno,
                         "dict_in_route",
@@ -141,9 +141,9 @@ class MapperPatternChecker(ast.NodeVisitor):
             # Check for dict literals
             if isinstance(node, ast.Dict):
                 source_line = self._get_source_line(node.lineno)
-                if not self._is_type_hint_context(
-                    node
-                ) and not self._is_logging_context(source_line):
+                if not self._is_type_hint_context(node) and not self._is_logging_context(
+                    source_line
+                ):
                     self._add_violation(
                         node.lineno,
                         "dict_in_service",
@@ -170,9 +170,7 @@ class MapperPatternChecker(ast.NodeVisitor):
         if isinstance(node.func, ast.Name):
             name = node.func.id
             # Check if it looks like a DTO or data class
-            if any(
-                pattern in name for pattern in ["DTO", "Response", "Request", "Result"]
-            ):
+            if any(pattern in name for pattern in ["DTO", "Response", "Request", "Result"]):
                 return True
             # Check if it's an imported DTO
             if name in self.imported_dto_names:
@@ -187,9 +185,7 @@ class MapperPatternChecker(ast.NodeVisitor):
 
     def _is_logging_context(self, source_line: str) -> bool:
         """Check if line is a logging call (usually safe for dict)."""
-        return any(
-            method in source_line for method in ["log.", "logger.", "print(", "print{"]
-        )
+        return any(method in source_line for method in ["log.", "logger.", "print(", "print{"])
 
     def _get_source_line(self, lineno: int) -> str:
         """Get source line by line number (1-indexed)."""
@@ -239,8 +235,12 @@ def check_mapper_files(repo_root: Path) -> list[dict]:
         if "src/app/infrastructure/mappers" in str(file_path):
             continue
 
-        # Allow src/app/service/mappers.py (mappers stored here)
+        # Allow src/app/service/mappers.py (agent result mappers)
         if "src/app/service/mappers.py" in str(file_path):
+            continue
+
+        # Allow src/app/api/mappers/ (API DTO mappers: domain → response DTO)
+        if "src/app/api/mappers" in str(file_path):
             continue
 
         # Check if file looks like a mapper
@@ -373,7 +373,7 @@ def main() -> int:
                     file_paths.append(p)
                 else:
                     print(
-                        f"  {YELLOW}WARN{NC} Skipping {sys.argv[i+1]}: not a valid Python file",
+                        f"  {YELLOW}WARN{NC} Skipping {sys.argv[i + 1]}: not a valid Python file",
                         file=sys.stderr,
                     )
                 i += 2
@@ -395,7 +395,7 @@ def main() -> int:
                     )
                 else:
                     print(
-                        f"  {YELLOW}WARN{NC} Skipping {sys.argv[i+1]}: not a valid directory",
+                        f"  {YELLOW}WARN{NC} Skipping {sys.argv[i + 1]}: not a valid directory",
                         file=sys.stderr,
                     )
                 i += 2
@@ -411,9 +411,7 @@ def main() -> int:
         if api_dir.exists():
             file_paths.extend([f for f in api_dir.rglob("*.py") if not skip_file(f)])
         if service_dir.exists():
-            file_paths.extend(
-                [f for f in service_dir.rglob("*.py") if not skip_file(f)]
-            )
+            file_paths.extend([f for f in service_dir.rglob("*.py") if not skip_file(f)])
 
     if not file_paths:
         api_dir = repo_root / "src" / "app" / "api"
@@ -465,9 +463,7 @@ def main() -> int:
                     print(f"    ... and {len(violations) - 10} more")
 
         if failures:
-            print(
-                f"\n{RED}{len(failures)} mapper pattern violation(s) found (FAIL).{NC}"
-            )
+            print(f"\n{RED}{len(failures)} mapper pattern violation(s) found (FAIL).{NC}")
             return 1
         else:
             print(f"\n{YELLOW}{len(warnings)} warning(s) found (PASS).{NC}")

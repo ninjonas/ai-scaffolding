@@ -1,11 +1,19 @@
 import json
 from datetime import datetime
 
-from app.domain.entities.knowledge_file import KnowledgeFile
-from app.infrastructure.mappers.knowledge_file import KnowledgeFileDataMapper
+from app.api.mappers.knowledge_file import KnowledgeFileApiMapper
+from app.domain.entities.knowledge_file import (
+    SCOPE_CONVERSATION,
+    SCOPE_PROJECT,
+    KnowledgeFile,
+)
+from app.infrastructure.mappers.knowledge_file import (
+    FIELD_FILE_TYPE,
+    FIELD_ID,
+    FIELD_SCOPE,
+    KnowledgeFileDataMapper,
+)
 from app.infrastructure.models.knowledge_file import KnowledgeFileModel
-from app.service.chat import SCOPE_PROJECT
-from app.service.knowledge import SCOPE_CONVERSATION
 from app.shared.field_keys import FIELD_KEY_DESCRIPTION, FIELD_KEY_NAME
 
 _FILE_TYPE_MD = "md"
@@ -101,25 +109,25 @@ def test_to_model_preserves_content():
 
 def test_to_response_dto_has_name():
     entity = _make_entity()
-    dto = KnowledgeFileDataMapper.to_response_dto(entity)
+    dto = KnowledgeFileApiMapper.to_response_dto(entity)
     assert getattr(dto, FIELD_KEY_NAME) == "Test File"
 
 
 def test_to_response_dto_has_description():
     entity = _make_entity()
-    dto = KnowledgeFileDataMapper.to_response_dto(entity)
+    dto = KnowledgeFileApiMapper.to_response_dto(entity)
     assert getattr(dto, FIELD_KEY_DESCRIPTION) == "A test file"
 
 
 def test_to_response_dto_has_tags():
     entity = _make_entity()
-    dto = KnowledgeFileDataMapper.to_response_dto(entity)
+    dto = KnowledgeFileApiMapper.to_response_dto(entity)
     assert dto.tags == ["a", "b"]
 
 
 def test_to_response_dto_has_file_type():
     entity = _make_entity()
-    dto = KnowledgeFileDataMapper.to_response_dto(entity)
+    dto = KnowledgeFileApiMapper.to_response_dto(entity)
     assert dto.file_type == _FILE_TYPE_MD
 
 
@@ -128,17 +136,38 @@ def test_to_response_dto_has_file_type():
 
 def test_to_catalog_entry_dto_has_id():
     entity = _make_entity()
-    dto = KnowledgeFileDataMapper.to_catalog_entry_dto(entity)
+    dto = KnowledgeFileApiMapper.to_catalog_entry_dto(entity)
     assert dto.id == "test-id"
 
 
 def test_to_catalog_entry_dto_has_scope():
     entity = _make_entity()
-    dto = KnowledgeFileDataMapper.to_catalog_entry_dto(entity)
+    dto = KnowledgeFileApiMapper.to_catalog_entry_dto(entity)
     assert dto.scope == SCOPE_PROJECT
 
 
 def test_to_catalog_entry_dto_has_no_content():
     entity = _make_entity()
-    dto = KnowledgeFileDataMapper.to_catalog_entry_dto(entity)
+    dto = KnowledgeFileApiMapper.to_catalog_entry_dto(entity)
     assert not hasattr(dto, "content")
+
+
+# -- to_catalog_dict --
+
+
+def test_to_catalog_dict_has_required_keys():
+    entity = _make_entity()
+    d = KnowledgeFileDataMapper.to_catalog_dict(entity)
+    assert FIELD_ID in d
+    assert FIELD_KEY_NAME in d
+    assert FIELD_KEY_DESCRIPTION in d
+    assert FIELD_FILE_TYPE in d
+    assert FIELD_SCOPE in d
+
+
+def test_to_catalog_dict_values_match_entity():
+    entity = _make_entity()
+    d = KnowledgeFileDataMapper.to_catalog_dict(entity)
+    assert d[FIELD_ID] == "test-id"
+    assert d[FIELD_KEY_NAME] == "Test File"
+    assert d[FIELD_SCOPE] == SCOPE_PROJECT

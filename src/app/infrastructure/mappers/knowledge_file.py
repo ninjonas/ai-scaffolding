@@ -1,6 +1,11 @@
-from app.api.dto.knowledge import KnowledgeCatalogEntryDTO, KnowledgeFileResponseDTO
 from app.domain.entities.knowledge_file import KnowledgeFile
 from app.infrastructure.models.knowledge_file import KnowledgeFileModel
+from app.shared.field_keys import FIELD_KEY_DESCRIPTION, FIELD_KEY_NAME
+
+FIELD_ID = "id"
+FIELD_FILE_TYPE = "file_type"
+FIELD_SCOPE = "scope"
+FIELD_TAGS = "tags"
 
 
 class KnowledgeFileDataMapper:
@@ -36,26 +41,13 @@ class KnowledgeFileDataMapper:
         return model
 
     @staticmethod
-    def to_response_dto(entity: KnowledgeFile) -> KnowledgeFileResponseDTO:
-        return KnowledgeFileResponseDTO(
-            id=entity.id,
-            name=entity.name,
-            description=entity.description,
-            tags=entity.tags,
-            file_type=entity.file_type,
-            scope=entity.scope,
-            conversation_id=entity.conversation_id,
-            created_at=entity.created_at,
-            updated_at=entity.updated_at,
-        )
-
-    @staticmethod
-    def to_catalog_entry_dto(entity: KnowledgeFile) -> KnowledgeCatalogEntryDTO:
-        return KnowledgeCatalogEntryDTO(
-            id=entity.id,
-            name=entity.name,
-            description=entity.description,
-            tags=entity.tags,
-            file_type=entity.file_type,
-            scope=entity.scope,
-        )
+    def to_catalog_dict(entity: KnowledgeFile) -> dict:
+        """Map entity to agent-facing catalog dict for build_knowledge_catalog."""
+        return {
+            FIELD_ID: entity.id,
+            FIELD_KEY_NAME: entity.name,
+            FIELD_KEY_DESCRIPTION: entity.description,
+            FIELD_TAGS: entity.tags,
+            FIELD_FILE_TYPE: entity.file_type,
+            FIELD_SCOPE: entity.scope,
+        }

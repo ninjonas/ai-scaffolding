@@ -4,9 +4,12 @@ import json
 import re
 from pathlib import Path
 
+import structlog
 import yaml
 
 from app.shared.field_keys import FIELD_KEY_NAME
+
+log = structlog.get_logger(__name__)
 
 SUPPORTED_EXTENSIONS = {"md", "txt", "json", "yml"}
 KEYS_PREFIX = "Keys: "
@@ -72,14 +75,16 @@ def _extract_from_mapping(filename: str, data_obj: object) -> tuple[str, str, li
 def _from_json(filename: str, content: str) -> tuple[str, str, list[str]]:
     try:
         return _extract_from_mapping(filename, json.loads(content))
-    except Exception:
+    except Exception as exc:
+        log.warning("knowledge_frontmatter_json_parse_error", filename=filename, error=str(exc))
         return _stem(filename), "", []
 
 
 def _from_yml(filename: str, content: str) -> tuple[str, str, list[str]]:
     try:
         return _extract_from_mapping(filename, yaml.safe_load(content))
-    except Exception:
+    except Exception as exc:
+        log.warning("knowledge_frontmatter_yml_parse_error", filename=filename, error=str(exc))
         return _stem(filename), "", []
 
 

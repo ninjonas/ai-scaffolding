@@ -40,12 +40,18 @@ async def lifespan(app: FastAPI):
     llm = create_llm(settings)
 
     from app.agents.supervisor.graph import create_supervisor_graph
+    from app.agents.tools.knowledge import make_read_knowledge_file_tool
+    from app.infrastructure.repositories.knowledge_file import SQLKnowledgeFileRepository
 
-    agent_graph = create_supervisor_graph(llm)
+    def knowledge_repo_factory() -> SQLKnowledgeFileRepository:
+        return SQLKnowledgeFileRepository(session_factory())
+
+    read_knowledge_file = make_read_knowledge_file_tool(knowledge_repo_factory())
+    agent_graph = create_supervisor_graph(llm, extra_tools=[read_knowledge_file])
     orchestrator = AgentOrchestrator(agent_graph)
     broker = AgentBroker(orchestrator)
     uow = SQLAlchemyUnitOfWork(session_factory)
-    knowledge_service = KnowledgeService(session_factory=session_factory)
+    knowledge_service = KnowledgeService(repo_factory=knowledge_repo_factory)
     chat_service = ChatService(
         broker=broker, unit_of_work=uow, knowledge_service=knowledge_service
     )
