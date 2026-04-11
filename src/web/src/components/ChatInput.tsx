@@ -9,8 +9,13 @@ interface KnowledgeChip {
   name: string;
 }
 
+export interface AttachedImage {
+  dataUrl: string;
+  filename: string;
+}
+
 interface ChatInputProps {
-  onSend: (message: string, images: string[], knowledgeFiles: KnowledgeChip[]) => void;
+  onSend: (message: string, images: AttachedImage[], knowledgeFiles: KnowledgeChip[]) => void;
   disabled: boolean;
   onToggleKnowledge?: () => void;
   knowledgeOpen?: boolean;
@@ -27,7 +32,7 @@ export function ChatInput({
   knowledgeOpen,
   conversationId,
 }: ChatInputProps) {
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<AttachedImage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -52,7 +57,7 @@ export function ChatInput({
     if (!trimmed) return;
     onSend(
       trimmed,
-      images.map((url) => url.split(',')[1]),
+      images,
       attachedFiles.map((f) => ({ id: f.id, name: f.name })),
     );
     setMessage('');
@@ -74,7 +79,8 @@ export function ChatInput({
     Array.from(files).forEach((file) => {
       if (file.size > MAX_IMAGE_SIZE) return;
       const reader = new FileReader();
-      reader.onload = () => setImages((prev) => [...prev, reader.result as string]);
+      reader.onload = () =>
+        setImages((prev) => [...prev, { dataUrl: reader.result as string, filename: file.name }]);
       reader.readAsDataURL(file);
     });
   };

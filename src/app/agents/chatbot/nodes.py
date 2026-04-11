@@ -58,7 +58,7 @@ async def invoke_llm(state: ChatbotState, llm, extra_tools: list | None = None) 
     knowledge_catalog = state.get("knowledge_catalog") or ""
     if knowledge_catalog:
         system_prompt += f"\n\n{knowledge_catalog}"
-        log.debug("chatbot_knowledge_catalog_injected", length=len(knowledge_catalog))
+        log.info("chatbot_knowledge_catalog_injected", length=len(knowledge_catalog))
 
     chat_messages = list(state["messages"])
     images = state.get("images") or []

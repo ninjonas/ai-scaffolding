@@ -9,9 +9,11 @@ class KnowledgeFileApiMapper:
             id=entity.id,
             name=entity.name,
             description=entity.description,
+            content=entity.content,
             tags=entity.tags,
             file_type=entity.file_type,
             scope=entity.scope,
+            enriched=entity.enriched,
             conversation_id=entity.conversation_id,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
@@ -26,4 +28,5 @@ class KnowledgeFileApiMapper:
             tags=entity.tags,
             file_type=entity.file_type,
             scope=entity.scope,
+            enriched=entity.enriched,
         )

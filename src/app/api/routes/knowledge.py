@@ -1,7 +1,7 @@
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 
 from app.api.dto.knowledge import (
     KnowledgeFileResponseDTO,
@@ -30,6 +30,7 @@ KnowledgeServiceDep = Annotated[KnowledgeService, Depends(get_knowledge_service)
 async def upload_file(
     request: KnowledgeFileUploadDTO,
     knowledge_service: KnowledgeServiceDep,
+    background_tasks: BackgroundTasks,
 ) -> KnowledgeFileResponseDTO:
     log.info(
         "knowledge_upload_request",
@@ -44,6 +45,7 @@ async def upload_file(
         scope=request.scope,
         conversation_id=request.conversation_id,
     )
+    background_tasks.add_task(knowledge_service.enrich_metadata, entity.id)
     dto = KnowledgeFileApiMapper.to_response_dto(entity)
     log.info("knowledge_upload_response", file_id=dto.id)
     return dto

@@ -19,9 +19,10 @@ type Toast = { id: number; message: string; retry?: () => void };
 interface KnowledgeSidebarProps {
   conversationId?: string;
   onClose: () => void;
+  refreshKey?: number;
 }
 
-export function KnowledgeSidebar({ conversationId, onClose }: KnowledgeSidebarProps) {
+export function KnowledgeSidebar({ conversationId, onClose, refreshKey }: KnowledgeSidebarProps) {
   const [tab, setTab] = useState<Scope>('project');
   const [files, setFiles] = useState<KnowledgeCatalogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +58,7 @@ export function KnowledgeSidebar({ conversationId, onClose }: KnowledgeSidebarPr
 
   useEffect(() => {
     fetchFiles();
-  }, [fetchFiles]);
+  }, [fetchFiles, refreshKey]);
 
   const handleUploadSuccess = useCallback((entry: KnowledgeCatalogEntry) => {
     setFiles((prev) => [...prev, entry]);

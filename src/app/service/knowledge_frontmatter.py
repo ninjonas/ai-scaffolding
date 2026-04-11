@@ -11,15 +11,17 @@ from app.shared.field_keys import FIELD_KEY_NAME
 
 log = structlog.get_logger(__name__)
 
-SUPPORTED_EXTENSIONS = {"md", "txt", "json", "yml"}
+TEXT_EXTENSIONS = {"md", "txt", "json", "yml"}
+IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+SUPPORTED_EXTENSIONS = TEXT_EXTENSIONS | IMAGE_EXTENSIONS
 KEYS_PREFIX = "Keys: "
 TOP_KEYS_SEPARATOR = ", "
 
 
 def detect_file_type(filename: str) -> str:
-    ext = Path(filename).suffix.lstrip(".")
+    ext = Path(filename).suffix.lstrip(".").lower()
     if ext not in SUPPORTED_EXTENSIONS:
-        raise ValueError(f"Unsupported file type: .{ext}. Accepted: .md, .txt, .json, .yml")
+        raise ValueError(f"Unsupported file type: .{ext}. Accepted: .md, .txt, .json, .yml, or image files")  # noqa: E501
     return ext
 
 
@@ -88,12 +90,22 @@ def _from_yml(filename: str, content: str) -> tuple[str, str, list[str]]:
         return _stem(filename), "", []
 
 
+def _from_image(filename: str, content: str) -> tuple[str, str, list[str]]:
+    return _stem(filename), "Image attached in conversation", ["image"]
+
+
 _GENERATORS = {
     "md": _from_md,
     "txt": _from_txt,
     "json": _from_json,
     "yml": _from_yml,
+    **{ext: _from_image for ext in IMAGE_EXTENSIONS},
 }
+
+
+def is_image(file_type: str) -> bool:
+    """Return True if the file type is an image format."""
+    return file_type in IMAGE_EXTENSIONS
 
 
 def generate(filename: str, content: str, file_type: str) -> tuple[str, str, list[str]]:

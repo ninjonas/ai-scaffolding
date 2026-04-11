@@ -2,14 +2,16 @@ from collections.abc import Callable
 from datetime import datetime
 
 import structlog
+from langchain_core.language_models import BaseChatModel
 
+from app.agents.tools.knowledge_frontmatter_llm import llm_generate
 from app.domain.entities.knowledge_file import (
     SCOPE_CONVERSATION,
     KnowledgeFile,
 )
 from app.infrastructure.mappers.knowledge_file import KnowledgeFileDataMapper
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
-from app.service.knowledge_frontmatter import detect_file_type, generate
+from app.service.knowledge_frontmatter import detect_file_type, generate, is_image
 
 log = structlog.get_logger()
 
@@ -20,8 +22,13 @@ ERR_FILE_NOT_FOUND = "Knowledge file not found: "
 
 
 class KnowledgeService:
-    def __init__(self, uow_factory: Callable[[], SQLAlchemyUnitOfWork]) -> None:
+    def __init__(
+        self,
+        uow_factory: Callable[[], SQLAlchemyUnitOfWork],
+        llm: BaseChatModel | None = None,
+    ) -> None:
         self._uow_factory = uow_factory
+        self._llm = llm
 
     async def upload(
         self,
@@ -37,10 +44,10 @@ class KnowledgeService:
             conversation_id=conversation_id,
         )
 
-        if len(content.encode("utf-8")) > MAX_FILE_SIZE_BYTES:
-            raise ValueError(f"File exceeds {MAX_FILE_SIZE_BYTES // 1024}KB limit")
-
         file_type = detect_file_type(filename)
+
+        if not is_image(file_type) and len(content.encode("utf-8")) > MAX_FILE_SIZE_BYTES:
+            raise ValueError(f"File exceeds {MAX_FILE_SIZE_BYTES // 1024}KB limit")
 
         async with self._uow_factory() as uow:
             existing = await uow.knowledge.list(scope=scope, conversation_id=conversation_id)
@@ -139,3 +146,45 @@ class KnowledgeService:
         async with self._uow_factory() as uow:
             files = await uow.knowledge.list(scope=scope, conversation_id=conversation_id)
         return [KnowledgeFileDataMapper.to_catalog_dict(f) for f in files]
+
+    async def enrich_metadata(self, file_id: str) -> None:
+        log.info("knowledge_enrich_start", file_id=file_id)
+        try:
+            async with self._uow_factory() as uow:
+                file = await uow.knowledge.get_by_id(file_id)
+                if file is None:
+                    log.warning("knowledge_enrich_skip", file_id=file_id, reason="not_found")
+                    return
+
+            if self._llm is not None and not is_image(file.file_type):
+                name, description, tags = await llm_generate(
+                    file.content, file.file_type, self._llm
+                )
+            else:
+                name, description, tags = "", "", []
+
+            if name:
+                await self.update(file_id, name=name, description=description, tags=tags)
+
+            async with self._uow_factory() as uow:
+                existing = await uow.knowledge.get_by_id(file_id)
+                if existing is not None:
+                    enriched_file = KnowledgeFile(
+                        id=existing.id,
+                        name=existing.name,
+                        description=existing.description,
+                        content=existing.content,
+                        file_type=existing.file_type,
+                        scope=existing.scope,
+                        tags=existing.tags,
+                        enriched=True,
+                        conversation_id=existing.conversation_id,
+                        created_at=existing.created_at,
+                        updated_at=datetime.utcnow(),
+                    )
+                    await uow.knowledge.save(enriched_file)
+                    await uow.commit()
+
+            log.info("knowledge_enrich_done", file_id=file_id, llm_used=bool(name))
+        except Exception as exc:
+            log.warning("knowledge_enrich_error", file_id=file_id, error=str(exc))

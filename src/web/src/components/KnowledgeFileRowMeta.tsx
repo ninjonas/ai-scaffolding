@@ -33,6 +33,11 @@ export function KnowledgeFileRowMeta({
             <CheckIcon />
           </span>
         )}
+        {f.enriched === false && (
+          <span className="knowledge-enriching-badge" aria-label="Enriching metadata">
+            enriching...
+          </span>
+        )}
       </div>
       {f.description && <div className="knowledge-file-desc">{f.description}</div>}
       {f.scope === 'conversation' && (

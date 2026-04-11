@@ -14,8 +14,10 @@ log = structlog.get_logger(__name__)
 
 CATALOG_HEADER = (
     "## Knowledge Base\n\n"
-    "The following files are available for reference. "
-    "Use `read_knowledge_file` to retrieve full contents.\n"
+    "The following files are in the user's knowledge base. "
+    "Each entry includes an id. "
+    "Call `read_knowledge_file` with that id directly when a file is relevant. "
+    "Do not ask the user for file ids or which file to read; use the ids below.\n"
 )
 
 CATALOG_ENTRY_PREFIX = "- **"

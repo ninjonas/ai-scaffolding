@@ -48,11 +48,12 @@ class ChatService:
             )
             catalog_entries = project_catalog + conversation_catalog
             knowledge_catalog = build_knowledge_catalog(catalog_entries)
-            log.debug(
+            log.info(
                 "knowledge_catalog_built",
                 conversation_id=conversation.id,
                 project_count=len(project_catalog),
                 conversation_count=len(conversation_catalog),
+                catalog_length=len(knowledge_catalog),
             )
 
             user_message = Message(
@@ -70,8 +71,12 @@ class ChatService:
                 message_count=len(conversation.messages),
             )
 
+            raw_content = response["content"]
+            if not raw_content:
+                log.warning("chat_empty_response", conversation_id=conversation.id)
+                raw_content = "Sorry, I didn't get a response. Please try again."
             assistant_message = Message(
-                content=response["content"],
+                content=raw_content,
                 role=MessageRole.ASSISTANT,
                 tool_calls=response.get("tool_calls", []),
             )

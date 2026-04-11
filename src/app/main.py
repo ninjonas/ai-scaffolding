@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI):
     orchestrator = AgentOrchestrator(agent_graph)
     broker = AgentBroker(orchestrator)
     uow = SQLAlchemyUnitOfWork(session_factory)
-    knowledge_service = KnowledgeService(uow_factory=knowledge_uow_factory)
+    knowledge_service = KnowledgeService(uow_factory=knowledge_uow_factory, llm=llm)
     chat_service = ChatService(
         broker=broker, unit_of_work=uow, knowledge_service=knowledge_service
     )
@@ -62,9 +62,23 @@ async def lifespan(app: FastAPI):
     _container._register("chat_service", chat_service)
     _container._register("knowledge_service", knowledge_service)
 
+    import asyncio
+
     import app.shared.di as di_module
 
     di_module._container = _container
+
+    async with knowledge_uow_factory() as uow:
+        all_files = await uow.knowledge.list(scope=None, conversation_id=None)
+        unenriched = [f for f in all_files if not f.enriched]
+
+    backfill_tasks: set[asyncio.Task] = set()
+    if unenriched:
+        log.info("knowledge_backfill_start", count=len(unenriched))
+        for f in unenriched:
+            task = asyncio.create_task(knowledge_service.enrich_metadata(f.id))
+            backfill_tasks.add(task)
+            task.add_done_callback(backfill_tasks.discard)
 
     log.info("app_started")
     yield

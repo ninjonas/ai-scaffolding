@@ -7,15 +7,18 @@ export interface KnowledgeCatalogEntry {
   tags: string[];
   fileType: string;
   scope: string;
+  enriched: boolean;
 }
 
 export interface KnowledgeFileResponse {
   id: string;
   name: string;
   description: string;
+  content: string;
   tags: string[];
   fileType: string;
   scope: string;
+  enriched: boolean;
   conversationId: string | null;
   createdAt: string;
   updatedAt: string;
