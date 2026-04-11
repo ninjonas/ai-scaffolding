@@ -4,6 +4,7 @@ export interface ChatRequest {
   message: string;
   conversationId?: string;
   images?: string[];
+  knowledgeFileIds?: string[];
 }
 
 export interface ToolCall {

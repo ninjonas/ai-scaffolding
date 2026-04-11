@@ -81,42 +81,51 @@ Wave N — Review (always reviewer agent)
 6. **Wait for user approval** — do NOT proceed until the user confirms
 7. Adjust and re-present if the user requests changes
 
-## Step 1.5: Create a working branch
+## Step 1.5: Working branch
 
-Before executing any work, create a branch:
+Check the current branch first (`git branch --show-current`).
 
-- **Plan-based work**: `feat/<NNN>-<plan-name>` (from `docs/plans/<NNN>-<plan-name>.md`)
-- **Chore/refactor**: `chore/<short-description>`
-- **Bug fix**: `bug/<short-description>`
-
-Confirm the branch name with the user before creating it. Do NOT proceed until approved.
+- **Already on a feature branch** (e.g. `feat/005-knowledge-base`): continue work there. Do NOT create a new branch.
+- **On `master` or `main`**: create a branch before executing any work:
+  - Plan-based work: `feat/<NNN>-<plan-name>`
+  - Chore/refactor: `chore/<short-description>`
+  - Bug fix: `bug/<short-description>`
+  - Confirm the branch name with the user before creating it.
 
 ## Step 2: Execute
 
-### Implementation waves
+### Agent invocation — default (background)
 
-**All parallel agents MUST use `isolation: "worktree"`** — no exceptions.
-Sequential agents (test, reviewer) run without isolation on the working branch.
+The agents in `.claude/agents/*.md` are first-class citizens. Always prefer them over built-in types. Read the agent definition and embed its full system prompt in the `prompt` field, using `subagent_type` matching the agent's filename slug (e.g. `ui`, `api`, `test`, `reviewer`).
+
+Only fall back to `subagent_type: "general-purpose"` if no `.claude/agents/*.md` definition covers the task.
+
+**Always set `run_in_background: true`** — all agents run in the background. You will be notified when each completes. Never block waiting for one agent when others can run in parallel.
 
 ```
 Agent({
   description: "<agent-name> — <phase description>",
-  subagent_type: "<agent-name>",
-  isolation: "worktree",
-  prompt: "Implement Phase <N>, Steps <X-Y> from docs/plans/<plan>.md.
+  subagent_type: "<agent-slug>",   // e.g. "ui", "api", "database", "graphs"
+  run_in_background: true,
+  prompt: "<paste agent system prompt from .claude/agents/<agent-slug>.md>
+
+    Task: Implement Phase <N>, Steps <X-Y> from docs/plans/<plan>.md.
     Files to create/modify: <list>.
+    Do NOT touch: <other agents' files>.
     Follow .claude/rules/code-conventions.md and .claude/rules/logging.md.
     Run just check after changes. Return JSON per your output format.
     Phase: <N>"
 })
 ```
 
-When an agent with `isolation: "worktree"` makes changes, it returns `worktree_path` and `branch` in its result. After merging, delete the worktree:
+### Agent invocation — isolated (worktrees)
 
-```bash
-git worktree remove --force <worktree_path>
-git branch -d <branch>
-```
+Only use `isolation: "worktree"` for large, multi-file tasks where parallel agents risk conflicting on the working branch, or when the user explicitly requests isolation. Ask the user before using worktrees — do not default to them.
+
+When worktree isolation is used:
+- Each parallel agent gets `isolation: "worktree"` 
+- After the wave completes, merge each worktree branch into the working branch one at a time
+- Delete the worktree and its branch: `git worktree remove --force <path> && git branch -d <branch>`
 
 ### Test wave
 
@@ -124,7 +133,9 @@ git branch -d <branch>
 Agent({
   description: "Test loop",
   subagent_type: "test",
-  prompt: "Run just test-py. Fix any failures in src/tests/.
+  prompt: "<paste agent system prompt from .claude/agents/test.md>
+
+    Run just test-py. Fix any failures in src/tests/.
     Do not touch src/app/. Stop when all tests pass.
     Phase: <N>"
 })
@@ -136,7 +147,9 @@ Agent({
 Agent({
   description: "Reviewer",
   subagent_type: "reviewer",
-  prompt: "Review all changes in <files> against .claude/rules/.
+  prompt: "<paste agent system prompt from .claude/agents/reviewer.md>
+
+    Review all changes in <files> against .claude/rules/.
     Phase: <N>"
 })
 ```

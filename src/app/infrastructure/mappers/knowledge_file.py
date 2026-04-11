@@ -1,10 +1,13 @@
 from app.domain.entities.knowledge_file import KnowledgeFile
 from app.infrastructure.models.knowledge_file import KnowledgeFileModel
-from app.shared.field_keys import FIELD_KEY_DESCRIPTION, FIELD_KEY_NAME
+from app.shared.field_keys import (
+    FIELD_KEY_DESCRIPTION,
+    FIELD_KEY_FILE_TYPE,
+    FIELD_KEY_ID,
+    FIELD_KEY_NAME,
+    FIELD_KEY_SCOPE,
+)
 
-FIELD_ID = "id"
-FIELD_FILE_TYPE = "file_type"
-FIELD_SCOPE = "scope"
 FIELD_TAGS = "tags"
 
 
@@ -44,10 +47,10 @@ class KnowledgeFileDataMapper:
     def to_catalog_dict(entity: KnowledgeFile) -> dict:
         """Map entity to agent-facing catalog dict for build_knowledge_catalog."""
         return {
-            FIELD_ID: entity.id,
+            FIELD_KEY_ID: entity.id,
             FIELD_KEY_NAME: entity.name,
             FIELD_KEY_DESCRIPTION: entity.description,
             FIELD_TAGS: entity.tags,
-            FIELD_FILE_TYPE: entity.file_type,
-            FIELD_SCOPE: entity.scope,
+            FIELD_KEY_FILE_TYPE: entity.file_type,
+            FIELD_KEY_SCOPE: entity.scope,
         }

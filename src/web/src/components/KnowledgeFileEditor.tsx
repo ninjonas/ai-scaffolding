@@ -1,104 +1,121 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { uploadKnowledgeFile, updateKnowledgeFile, getKnowledgeFile } from '../api/knowledge';
+import {
+  updateKnowledgeFile,
+  getKnowledgeFile,
+  type KnowledgeCatalogEntry,
+} from '../api/knowledge';
+import { CloseIcon } from './KnowledgeIcons';
+import { EditorForm } from './KnowledgeEditorForm';
+import { KnowledgeUnsavedGuard } from './KnowledgeUnsavedGuard';
+import { toCatalogEntry } from './knowledgeEditorHelpers';
 
 interface KnowledgeFileEditorProps {
-  fileId?: string;
+  fileId: string;
   scope: 'project' | 'conversation';
   conversationId?: string;
-  onSave: () => void;
+  onSave: (entry?: KnowledgeCatalogEntry) => void;
   onClose: () => void;
 }
 
-const MAX_FILE_SIZE = 500 * 1024;
-
-export function KnowledgeFileEditor({
-  fileId,
-  scope: defaultScope,
-  conversationId,
-  onSave,
-  onClose,
-}: KnowledgeFileEditorProps) {
-  const [filename, setFilename] = useState('');
+export function KnowledgeFileEditor({ fileId, onSave, onClose }: KnowledgeFileEditorProps) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [content, setContent] = useState('');
-  const [scope, setScope] = useState<'project' | 'conversation'>(defaultScope);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(!!fileId);
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [dirty, setDirty] = useState(false);
+  const [showUnsavedGuard, setShowUnsavedGuard] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const firstFocusRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!fileId) return;
+    setLoading(true);
     getKnowledgeFile(fileId)
       .then((f) => {
-        setFilename(f.name);
-        setScope(f.scope as 'project' | 'conversation');
+        setName(f.name);
+        setDescription(f.description ?? '');
+        setTags(f.tags ?? []);
+        setContent('');
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load file'))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        requestAnimationFrame(() => firstFocusRef.current?.focus());
+      });
   }, [fileId]);
 
-  const trapFocus = useCallback((e: KeyboardEvent) => {
-    if (e.key !== 'Tab' || !dialogRef.current) return;
-    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-      'button, input, textarea, select, [tabindex]:not([tabindex="-1"])',
-    );
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener('keydown', trapFocus);
-    return () => document.removeEventListener('keydown', trapFocus);
-  }, [trapFocus]);
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > MAX_FILE_SIZE) {
-      setError(`File exceeds 500KB limit (${Math.round(file.size / 1024)}KB)`);
+  const guardClose = useCallback(() => {
+    if (dirty) {
+      setShowUnsavedGuard(true);
       return;
     }
-    setError('');
-    if (!filename) setFilename(file.name);
-    const reader = new FileReader();
-    reader.onload = () => setContent(reader.result as string);
-    reader.readAsText(file);
+    onClose();
+  }, [dirty, onClose]);
+
+  const trapFocus = useCallback(
+    (e: KeyboardEvent) => {
+      if (!panelRef.current) return;
+      if (e.key === 'Escape') {
+        guardClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+        'button, input, textarea, select, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    },
+    [guardClose],
+  );
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    panel.addEventListener('keydown', trapFocus);
+    return () => panel.removeEventListener('keydown', trapFocus);
+  }, [trapFocus]);
+
+  const mark = () => setDirty(true);
+
+  const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const trimmed = tagInput.trim();
+    if (trimmed && !tags.includes(trimmed)) {
+      setTags((p) => [...p, trimmed]);
+      mark();
+    }
+    setTagInput('');
   };
 
   const handleSubmit = async () => {
-    if (!filename.trim()) {
-      setError('Filename is required');
-      return;
-    }
-    if (!fileId && !content.trim()) {
-      setError('Content is required');
+    if (!name.trim()) {
+      setError('Name is required');
       return;
     }
     setSaving(true);
     setError('');
     try {
-      if (fileId) {
-        await updateKnowledgeFile(fileId, {
-          name: filename,
-          ...(content ? { content } : {}),
-        });
-      } else {
-        await uploadKnowledgeFile({
-          filename,
-          content,
-          scope,
-          ...(scope === 'conversation' && conversationId ? { conversationId } : {}),
-        });
-      }
-      onSave();
+      const updated = await updateKnowledgeFile(fileId, {
+        name,
+        description,
+        tags,
+        ...(content ? { content } : {}),
+      });
+      setDirty(false);
+      onSave(toCatalogEntry(updated));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save');
     } finally {
@@ -107,72 +124,68 @@ export function KnowledgeFileEditor({
   };
 
   return (
-    <div className="knowledge-editor-backdrop" onClick={onClose}>
+    <div className="knowledge-editor-backdrop" onClick={guardClose}>
       <div
-        className="knowledge-editor-modal"
-        ref={dialogRef}
+        className="knowledge-editor-panel"
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label={fileId ? 'Edit knowledge file' : 'Upload knowledge file'}
+        aria-label="Edit knowledge file"
         onClick={(e) => e.stopPropagation()}
+        tabIndex={-1}
       >
+        {showUnsavedGuard && (
+          <KnowledgeUnsavedGuard
+            onDiscard={() => {
+              setShowUnsavedGuard(false);
+              onClose();
+            }}
+            onKeep={() => setShowUnsavedGuard(false)}
+          />
+        )}
         <div className="knowledge-editor-header">
-          <h3>{fileId ? 'Edit file' : 'Upload file'}</h3>
-          <button className="knowledge-close-btn" onClick={onClose} aria-label="Close">
-            &times;
+          <h3>Edit file</h3>
+          <button className="knowledge-close-btn" onClick={guardClose} aria-label="Close editor">
+            <CloseIcon />
           </button>
         </div>
+
         {loading ? (
-          <div className="knowledge-skeleton" />
+          <div className="knowledge-editor-skeleton">
+            {[36, 36, 80, 120].map((h, i) => (
+              <div key={i} className="knowledge-skeleton" style={{ height: h }} />
+            ))}
+          </div>
         ) : (
-          <>
-            <label className="knowledge-field-label">
-              Filename
-              <input
-                type="text"
-                className="knowledge-input"
-                value={filename}
-                onChange={(e) => setFilename(e.target.value)}
-                placeholder="example.md"
-              />
-            </label>
-            {!fileId && (
-              <label className="knowledge-field-label">
-                Scope
-                <select
-                  className="knowledge-input"
-                  value={scope}
-                  onChange={(e) => setScope(e.target.value as 'project' | 'conversation')}
-                >
-                  <option value="project">Project</option>
-                  {conversationId && <option value="conversation">Conversation</option>}
-                </select>
-              </label>
-            )}
-            <label className="knowledge-field-label">
-              File
-              <input
-                type="file"
-                accept=".md,.txt,.json,.yml"
-                className="knowledge-input"
-                onChange={handleFileSelect}
-              />
-            </label>
-            <label className="knowledge-field-label">
-              Content
-              <textarea
-                className="knowledge-textarea"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Paste content or select a file above"
-                rows={8}
-              />
-            </label>
-            {error && <div className="knowledge-error">{error}</div>}
-            <button className="knowledge-submit-btn" onClick={handleSubmit} disabled={saving}>
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-          </>
+          <EditorForm
+            nameRef={firstFocusRef}
+            name={name}
+            description={description}
+            tags={tags}
+            tagInput={tagInput}
+            content={content}
+            saving={saving}
+            error={error}
+            onNameChange={(v) => {
+              setName(v);
+              mark();
+            }}
+            onDescriptionChange={(v) => {
+              setDescription(v);
+              mark();
+            }}
+            onTagInputChange={setTagInput}
+            onAddTag={handleAddTag}
+            onRemoveTag={(tag) => {
+              setTags((p) => p.filter((t) => t !== tag));
+              mark();
+            }}
+            onContentChange={(v) => {
+              setContent(v);
+              mark();
+            }}
+            onSubmit={handleSubmit}
+          />
         )}
       </div>
     </div>

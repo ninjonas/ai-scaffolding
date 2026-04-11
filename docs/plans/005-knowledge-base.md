@@ -184,6 +184,16 @@ Use Lucide SVG icons for visual differentiation, consistent with the existing pa
 - [ ] In the sidebar, conversation-scoped files show a subtle label: "Linked to this conversation."
 - [ ] No orphan cleanup needed since cascade delete handles it at the database level.
 
+### Phase 8: Upload UX — drag-and-drop without form `Not Started`
+
+The current drop zone opens an upload modal requiring the user to fill in filename, scope, and content manually. This contradicts the design intent: the backend already auto-generates all metadata via `knowledge_frontmatter.py`. The form should only appear for **edit**, not upload.
+
+- [ ] `handleDrop` in `KnowledgeSidebar.tsx`: read dropped files via `FileReader`, call `uploadKnowledgeFile()` directly with `file.name` as filename and file text as content. Do not open the editor modal.
+- [ ] Remove filename and content fields from the upload path in `KnowledgeFileEditor.tsx`. Form is edit-only.
+- [ ] Scope defaults to `project`. Expose as a simple toggle in the sidebar header (not inside the modal).
+- [ ] Upload feedback follows Phase 7 spec: inline spinner on drop, green checkmark on success, toast on error.
+- [ ] Multiple files dropped at once are uploaded sequentially; each shows individual feedback in the file list.
+
 ## Key Patterns
 
 ### KnowledgeFile entity
@@ -260,6 +270,7 @@ No new dependencies. Uses existing React, fetch API.
 | 5     | Phase 4    | frontend   | Needs REST API endpoints                                |
 | 6     | Phase 4    | frontend   | Needs REST API endpoints, can run parallel with Phase 5 |
 | 7     | None       | frontend   | UI/UX specs, runs parallel with Phases 5-6              |
+| 8     | Phase 5, 7 | frontend   | Upload UX fix, depends on sidebar and UX specs          |
 
 ### Sequencing constraints
 
@@ -290,3 +301,4 @@ No new dependencies. Uses existing React, fetch API.
 | 2026-04-10 | Claude (api)   | Phase 2 complete: KnowledgeService + knowledge_frontmatter module implemented, all checks pass          |
 | 2026-04-10 | Claude (api)   | Phase 3 partial: AgentBroker.chat_response and ChatService.send_message updated with knowledge catalog  |
 | 2026-04-10 | Claude (api)   | Phase 4 complete: DTOs, routes, mapper DTO methods, DI wiring, and router registration implemented      |
+| 2026-04-10 | Jonas + Claude | Phase 8 added: upload UX fix — drop zone fires directly, no form for upload, edit-only modal            |

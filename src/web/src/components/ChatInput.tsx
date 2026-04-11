@@ -1,118 +1,111 @@
-import { useState, useRef, type KeyboardEvent } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
+import { BookIcon, PaperclipIcon, SendArrowIcon } from './ChatInputIcons';
+import { KnowledgeMentionDropdown } from './KnowledgeMentionDropdown';
+import { KnowledgeChipsBar } from './KnowledgeChipsBar';
+import { useMentionState } from './useMentionState';
+
+interface KnowledgeChip {
+  id: string;
+  name: string;
+}
 
 interface ChatInputProps {
-  onSend: (message: string, images: string[]) => void;
+  onSend: (message: string, images: string[], knowledgeFiles: KnowledgeChip[]) => void;
   disabled: boolean;
   onToggleKnowledge?: () => void;
   knowledgeOpen?: boolean;
+  conversationId?: string;
 }
 
-const BookIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-  </svg>
-);
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const LISTBOX_ID = 'mention-listbox';
 
-const PaperclipIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-  </svg>
-);
-
-const SendArrowIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M12 19V5M5 12l7-7 7 7" />
-  </svg>
-);
-
-export function ChatInput({ onSend, disabled, onToggleKnowledge, knowledgeOpen }: ChatInputProps) {
-  const [message, setMessage] = useState('');
+export function ChatInput({
+  onSend,
+  disabled,
+  onToggleKnowledge,
+  knowledgeOpen,
+  conversationId,
+}: ChatInputProps) {
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const {
+    message,
+    setMessage,
+    attachedFiles,
+    setAttachedFiles,
+    filteredCatalog,
+    catalogLoading,
+    highlightedIndex,
+    setHighlightedIndex,
+    dropdownVisible,
+    selectFile,
+    handleTextChange,
+    handleDropdownKeyDown,
+    resetMention,
+  } = useMentionState({ conversationId, textareaRef });
 
   const handleSend = () => {
     const trimmed = message.trim();
     if (!trimmed) return;
-    const base64Images = images.map((url) => url.split(',')[1]);
-    onSend(trimmed, base64Images);
+    onSend(
+      trimmed,
+      images.map((url) => url.split(',')[1]),
+      attachedFiles.map((f) => ({ id: f.id, name: f.name })),
+    );
     setMessage('');
     setImages([]);
+    resetMention();
   };
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (handleDropdownKeyDown(e)) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
 
-  const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-
     Array.from(files).forEach((file) => {
-      if (file.size > MAX_IMAGE_SIZE) {
-        return; // skip files over 10MB
-      }
+      if (file.size > MAX_IMAGE_SIZE) return;
       const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        setImages((prev) => [...prev, dataUrl]);
-      };
+      reader.onload = () => setImages((prev) => [...prev, reader.result as string]);
       reader.readAsDataURL(file);
     });
   };
 
+  const activeDescendant =
+    dropdownVisible && filteredCatalog.length > 0
+      ? `mention-option-${highlightedIndex}`
+      : undefined;
+
   return (
-    <div className="chat-input-container">
-      {images.length > 0 && (
-        <div className="image-previews">
-          {images.map((img, i) => (
-            <div key={i} className="image-preview">
-              <img src={img} alt={`Upload ${i + 1}`} />
-              <button
-                aria-label="Remove image"
-                onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
-              >
-                &times;
-              </button>
-            </div>
-          ))}
-        </div>
+    <div className="chat-input-container" style={{ position: 'relative' }}>
+      {dropdownVisible && (
+        <KnowledgeMentionDropdown
+          items={filteredCatalog}
+          highlightedIndex={highlightedIndex}
+          onSelect={(entry) => selectFile(entry, message)}
+          onHighlight={setHighlightedIndex}
+          loading={catalogLoading}
+          listboxId={LISTBOX_ID}
+        />
       )}
+
+      {(images.length > 0 || attachedFiles.length > 0) && (
+        <KnowledgeChipsBar
+          images={images}
+          attachedFiles={attachedFiles}
+          onRemoveImage={(i) => setImages((prev) => prev.filter((_, j) => j !== i))}
+          onRemoveFile={(id) => setAttachedFiles((prev) => prev.filter((f) => f.id !== id))}
+        />
+      )}
+
       <div className="chat-input-row">
         {onToggleKnowledge && (
           <button
@@ -146,13 +139,19 @@ export function ChatInput({ onSend, disabled, onToggleKnowledge, knowledgeOpen }
           onChange={handleImageUpload}
         />
         <textarea
+          ref={textareaRef}
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleTextChange}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
+          placeholder="Type a message... (@ to mention a knowledge file)"
           disabled={disabled}
           rows={1}
           aria-label="Message"
+          role="combobox"
+          aria-expanded={dropdownVisible}
+          aria-controls={dropdownVisible ? LISTBOX_ID : undefined}
+          aria-activedescendant={activeDescendant}
+          aria-autocomplete="list"
         />
         <button
           className="send-btn"

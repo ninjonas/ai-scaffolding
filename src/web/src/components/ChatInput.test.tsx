@@ -5,7 +5,7 @@ import { ChatInput } from './ChatInput';
 describe('ChatInput', () => {
   it('renders textarea and buttons', () => {
     render(<ChatInput onSend={vi.fn()} disabled={false} />);
-    expect(screen.getByRole('textbox', { name: /message/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /message/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /attach image/i })).toBeInTheDocument();
   });
@@ -17,7 +17,7 @@ describe('ChatInput', () => {
 
   it('typing enables send button', () => {
     render(<ChatInput onSend={vi.fn()} disabled={false} />);
-    const textarea = screen.getByRole('textbox', { name: /message/i });
+    const textarea = screen.getByRole('combobox', { name: /message/i });
     fireEvent.change(textarea, { target: { value: 'Hello' } });
     expect(screen.getByRole('button', { name: /send/i })).not.toBeDisabled();
   });
@@ -25,16 +25,16 @@ describe('ChatInput', () => {
   it('Enter key submits message', () => {
     const onSend = vi.fn();
     render(<ChatInput onSend={onSend} disabled={false} />);
-    const textarea = screen.getByRole('textbox', { name: /message/i });
+    const textarea = screen.getByRole('combobox', { name: /message/i });
     fireEvent.change(textarea, { target: { value: 'Test message' } });
     fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false });
-    expect(onSend).toHaveBeenCalledWith('Test message', []);
+    expect(onSend).toHaveBeenCalledWith('Test message', [], []);
   });
 
   it('Shift+Enter does not submit', () => {
     const onSend = vi.fn();
     render(<ChatInput onSend={onSend} disabled={false} />);
-    const textarea = screen.getByRole('textbox', { name: /message/i });
+    const textarea = screen.getByRole('combobox', { name: /message/i });
     fireEvent.change(textarea, { target: { value: 'Test message' } });
     fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: true });
     expect(onSend).not.toHaveBeenCalled();

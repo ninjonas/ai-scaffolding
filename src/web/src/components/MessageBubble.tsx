@@ -1,14 +1,40 @@
 import type { ToolCall } from '../api/chat';
 
+interface KnowledgeChip {
+  id: string;
+  name: string;
+}
+
 interface MessageBubbleProps {
   role: 'user' | 'assistant';
   content: string;
   toolCalls?: ToolCall[];
   images?: string[];
+  knowledgeFiles?: KnowledgeChip[];
   loading?: boolean;
 }
 
-export function MessageBubble({ role, content, toolCalls, images, loading }: MessageBubbleProps) {
+function ToolCallsSection({ toolCalls }: { toolCalls: ToolCall[] }) {
+  return (
+    <div className="tool-calls">
+      <div className="tool-calls-label">Tools used:</div>
+      {toolCalls.map((tc, i) => (
+        <div key={i} className="tool-call">
+          <code>{tc.name}</code>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function MessageBubble({
+  role,
+  content,
+  toolCalls,
+  images,
+  knowledgeFiles,
+  loading,
+}: MessageBubbleProps) {
   return (
     <div className={`message message-${role}${loading ? ' message-loading' : ''}`}>
       {role === 'assistant' && <div className="message-role">Assistant</div>}
@@ -32,19 +58,19 @@ export function MessageBubble({ role, content, toolCalls, images, loading }: Mes
               ))}
             </div>
           )}
+          {knowledgeFiles && knowledgeFiles.length > 0 && (
+            <div className="message-knowledge-chips">
+              {knowledgeFiles.map((kf) => (
+                <span key={kf.id} className="knowledge-chip knowledge-chip--static">
+                  {kf.name}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="message-content">{content}</div>
         </>
       )}
-      {!loading && toolCalls && toolCalls.length > 0 && (
-        <div className="tool-calls">
-          <div className="tool-calls-label">Tools used:</div>
-          {toolCalls.map((tc, i) => (
-            <div key={i} className="tool-call">
-              <code>{tc.name}</code>
-            </div>
-          ))}
-        </div>
-      )}
+      {!loading && toolCalls && toolCalls.length > 0 && <ToolCallsSection toolCalls={toolCalls} />}
     </div>
   );
 }

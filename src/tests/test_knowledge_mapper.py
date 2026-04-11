@@ -7,14 +7,21 @@ from app.domain.entities.knowledge_file import (
     SCOPE_PROJECT,
     KnowledgeFile,
 )
-from app.infrastructure.mappers.knowledge_file import (
-    FIELD_FILE_TYPE,
-    FIELD_ID,
-    FIELD_SCOPE,
-    KnowledgeFileDataMapper,
-)
+from app.infrastructure.mappers.knowledge_file import KnowledgeFileDataMapper
 from app.infrastructure.models.knowledge_file import KnowledgeFileModel
-from app.shared.field_keys import FIELD_KEY_DESCRIPTION, FIELD_KEY_NAME
+from app.shared.field_keys import (
+    FIELD_KEY_DESCRIPTION,
+    FIELD_KEY_NAME,
+)
+from app.shared.field_keys import (
+    FIELD_KEY_FILE_TYPE as FIELD_FILE_TYPE,
+)
+from app.shared.field_keys import (
+    FIELD_KEY_ID as FIELD_ID,
+)
+from app.shared.field_keys import (
+    FIELD_KEY_SCOPE as FIELD_SCOPE,
+)
 
 _FILE_TYPE_MD = "md"
 _FILE_TYPE_TXT = "txt"

@@ -2,7 +2,13 @@ import structlog
 from langchain_core.tools import tool
 
 from app.domain.repositories.knowledge_file import KnowledgeFileRepository
-from app.shared.field_keys import FIELD_KEY_NAME
+from app.shared.field_keys import (
+    FIELD_KEY_DESCRIPTION,
+    FIELD_KEY_FILE_TYPE,
+    FIELD_KEY_ID,
+    FIELD_KEY_NAME,
+    FIELD_KEY_SCOPE,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -12,10 +18,7 @@ CATALOG_HEADER = (
     "Use `read_knowledge_file` to retrieve full contents.\n"
 )
 
-FIELD_FILE_TYPE = "file_type"
-FIELD_SCOPE = "scope"
-FIELD_DESCRIPTION = "description"
-FIELD_ID = "id"
+CATALOG_ENTRY_PREFIX = "- **"
 
 
 def build_knowledge_catalog(catalog: list[dict]) -> str:
@@ -29,11 +32,14 @@ def build_knowledge_catalog(catalog: list[dict]) -> str:
     lines = []
     for entry in catalog:
         name = entry.get(FIELD_KEY_NAME, "")
-        file_type = entry.get(FIELD_FILE_TYPE, "")
-        scope = entry.get(FIELD_SCOPE, "")
-        description = entry.get(FIELD_DESCRIPTION, "")
-        file_id = entry.get(FIELD_ID, "")
-        lines.append(f"- **{name}** ({file_type}, {scope}): {description} [id: {file_id}]")
+        file_type = entry.get(FIELD_KEY_FILE_TYPE, "")
+        scope = entry.get(FIELD_KEY_SCOPE, "")
+        description = entry.get(FIELD_KEY_DESCRIPTION, "")
+        file_id = entry.get(FIELD_KEY_ID, "")
+        entry_line = (
+            f"{CATALOG_ENTRY_PREFIX}{name}** ({file_type}, {scope}): {description} [id: {file_id}]"
+        )
+        lines.append(entry_line)
     return CATALOG_HEADER + "\n".join(lines)
 
 
