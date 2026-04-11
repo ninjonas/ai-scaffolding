@@ -50,7 +50,7 @@ ______________________________________________________________________
 | No fallback route          | If the LLM returns an unexpected agent name, `decide_next()` could route to a nonexistent node.                       | Add a default/fallback that routes to chatbot, and log a warning.                                                                |
 | State projection is manual | Each subgraph invocation manually constructs the input dict.                                                          | This is fine at 2 agents but will become a maintenance burden. The broker pattern partially addresses this.                      |
 
-**Reference pattern (LangGraph docs):** The official supervisor example uses `Command(goto=agent_name)` for handoffs. Your implementation uses conditional edges from a routing function, which is equally valid but slightly more verbose.
+**Reference pattern (LangGraph docs):** The official supervisor example uses `Command(goto=agent_name)` for handoffs ([Hierarchical Agent Teams Tutorial](https://langchain-ai.github.io/langgraph/tutorials/multi_agent/hierarchical_agent_teams/)). Your implementation uses conditional edges from a routing function, which is equally valid but slightly more verbose.
 
 ### 1.2 Chatbot (`src/app/agents/chatbot/`)
 
@@ -63,12 +63,12 @@ ______________________________________________________________________
 
 **Gaps and recommendations:**
 
-| Issue                           | Detail                                                                                                  | Fix                                                                                                                                                                          |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| No `handle_tool_errors=True`    | `ToolNode(ALL_TOOLS)` does not set error handling. A tool exception crashes the graph run.              | Set `ToolNode(ALL_TOOLS, handle_tool_errors=True)`. The error message gets sent back to the LLM as a tool response, letting it retry or explain the failure.                 |
-| No `max_steps` guard            | The LLM-tool loop has no hard cap. A model that keeps calling tools will loop indefinitely.             | Add a `steps: int` counter to `ChatbotState`, increment in `llm_node`, and add a conditional edge that routes to END when `steps >= MAX_STEPS`.                              |
-| Knowledge catalog scales poorly | The full catalog is injected into the system prompt as text. With many files, this eats context window. | Move to RAG: embed knowledge files in a vector store, retrieve top-k relevant chunks per query, inject only those. Keep the `read_knowledge_file` tool for full-file access. |
-| `search_web` is a mock          | Returns hardcoded results.                                                                              | Integrate a real search provider. Tavily has a LangChain integration (`TavilySearchResults`).                                                                                |
+| Issue                           | Detail                                                                                                                                                                              | Fix                                                                                                                                                                          |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No `handle_tool_errors=True`    | `ToolNode(ALL_TOOLS)` does not set error handling. A tool exception crashes the graph run. ([ToolNode API Reference](https://langchain-ai.github.io/langgraph/reference/prebuilt/)) | Set `ToolNode(ALL_TOOLS, handle_tool_errors=True)`. The error message gets sent back to the LLM as a tool response, letting it retry or explain the failure.                 |
+| No `max_steps` guard            | The LLM-tool loop has no hard cap. A model that keeps calling tools will loop indefinitely.                                                                                         | Add a `steps: int` counter to `ChatbotState`, increment in `llm_node`, and add a conditional edge that routes to END when `steps >= MAX_STEPS`.                              |
+| Knowledge catalog scales poorly | The full catalog is injected into the system prompt as text. With many files, this eats context window.                                                                             | Move to RAG: embed knowledge files in a vector store, retrieve top-k relevant chunks per query, inject only those. Keep the `read_knowledge_file` tool for full-file access. |
+| `search_web` is a mock          | Returns hardcoded results.                                                                                                                                                          | Integrate a real search provider. Tavily has a LangChain integration ([Tavily Integration](https://python.langchain.com/docs/integrations/tools/tavily_search/)).            |
 
 ### 1.3 Researcher (`src/app/agents/researcher/`)
 
@@ -79,14 +79,14 @@ ______________________________________________________________________
 
 **Gaps and recommendations:**
 
-| Issue                                   | Detail                                                                                                                | Fix                                                                                                                                    |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `ChatOpenAI` type hint in `graph.py:17` | `def create_researcher_graph(llm: ChatOpenAI)` violates the `BaseChatModel` convention in `langgraph-conventions.md`. | Change to `BaseChatModel` from `langchain_core.language_models.chat_models`.                                                           |
-| Only one tool                           | Researcher can only search the web. No access to knowledge base, no ability to read URLs, no document analysis.       | Add tools: `read_knowledge_file` (access uploaded docs), a URL reader/scraper, and optionally a summarization tool for long documents. |
-| No `handle_tool_errors=True`            | Same issue as chatbot.                                                                                                | Same fix.                                                                                                                              |
-| No `max_steps` guard                    | Same issue as chatbot.                                                                                                | Same fix.                                                                                                                              |
-| No findings accumulation                | `ResearcherState` has a `findings: list[str]` field but no node writes to it.                                         | Either use it (accumulate search results across iterations for synthesis) or remove the dead field.                                    |
-| Import violation                        | `graph.py` imports `ChatOpenAI` from `langchain_openai`.                                                              | Import `BaseChatModel` from `langchain_core` instead.                                                                                  |
+| Issue                                   | Detail                                                                                                                                                                                                                                                                               | Fix                                                                                                                                    |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `ChatOpenAI` type hint in `graph.py:17` | `def create_researcher_graph(llm: ChatOpenAI)` violates the `BaseChatModel` convention in `langgraph-conventions.md`. ([BaseChatModel API Reference](https://python.langchain.com/api_reference/core/language_models/langchain_core.language_models.chat_models.BaseChatModel.html)) | Change to `BaseChatModel` from `langchain_core.language_models.chat_models`.                                                           |
+| Only one tool                           | Researcher can only search the web. No access to knowledge base, no ability to read URLs, no document analysis.                                                                                                                                                                      | Add tools: `read_knowledge_file` (access uploaded docs), a URL reader/scraper, and optionally a summarization tool for long documents. |
+| No `handle_tool_errors=True`            | Same issue as chatbot.                                                                                                                                                                                                                                                               | Same fix.                                                                                                                              |
+| No `max_steps` guard                    | Same issue as chatbot.                                                                                                                                                                                                                                                               | Same fix.                                                                                                                              |
+| No findings accumulation                | `ResearcherState` has a `findings: list[str]` field but no node writes to it.                                                                                                                                                                                                        | Either use it (accumulate search results across iterations for synthesis) or remove the dead field.                                    |
+| Import violation                        | `graph.py` imports `ChatOpenAI` from `langchain_openai`.                                                                                                                                                                                                                             | Import `BaseChatModel` from `langchain_core` instead.                                                                                  |
 
 ______________________________________________________________________
 
@@ -166,9 +166,9 @@ The knowledge base stores uploaded files (markdown, text, JSON, YAML, images) wi
 
 ### 4.2 Scaling Problem
 
-The current approach injects the full catalog into the system prompt. With the 500KB file limit and 50 files per project, the catalog text alone could consume significant context window. The LLM sees metadata for every file on every turn, regardless of relevance.
+The current approach injects the full catalog into the system prompt. With the 500KB file limit and 50 files per project, the catalog text alone could consume significant context window. The LLM sees metadata for every file on every turn, regardless of relevance. Research shows that accuracy degrades when relevant information is buried in large contexts ("lost in the middle" problem), and RAG pipelines outperform full-context injection on cost and latency for most retrieval workloads ([RAG vs Long Context Windows, Redis](https://redis.io/blog/rag-vs-large-context-window-ai-apps/)).
 
-### 4.3 Recommended: Adaptive RAG Pattern
+### 4.3 Recommended: Adaptive RAG Pattern ([LangGraph Adaptive RAG Tutorial](https://langchain-ai.github.io/langgraph/tutorials/rag/langgraph_adaptive_rag/))
 
 ```mermaid
 flowchart LR
@@ -193,6 +193,8 @@ flowchart LR
 ______________________________________________________________________
 
 ## 5. Checkpointing and Memory
+
+LangGraph's persistence model saves graph state at every super-step, enabling conversation continuity, fault recovery, and time-travel debugging ([Persistence Concepts](https://langchain-ai.github.io/langgraph/concepts/persistence/), [Persistence How-To](https://langchain-ai.github.io/langgraph/how-tos/persistence/)).
 
 ### 5.1 Current State: No Checkpointing
 
@@ -228,7 +230,7 @@ This gives you automatic conversation continuity within the graph, checkpoint-ba
 
 ### 5.3 Cross-Thread Memory via Stores
 
-LangGraph's `Store` interface enables memory that persists across conversations:
+LangGraph's `Store` interface enables memory that persists across conversations ([Memory Concepts](https://langchain-ai.github.io/langgraph/concepts/memory/), [LangMem Library](https://langchain-ai.github.io/langmem/)):
 
 ```python
 from langgraph.store.memory import InMemoryStore
@@ -267,7 +269,7 @@ tool_node = ToolNode(tools, handle_tool_errors=True)
 
 This single change means tool exceptions become error messages sent back to the LLM, which can then decide to retry with different parameters or explain the failure to the user.
 
-**Add max_steps to prevent runaway loops:**
+**Add max_steps to prevent runaway loops** ([Recursion Limit How-To](https://langchain-ai.github.io/langgraph/how-tos/recursion-limit/), [GraphRecursionError Reference](https://langchain-ai.github.io/langgraph/troubleshooting/errors/)):
 
 ```python
 class ChatbotState(MessagesState):
@@ -293,7 +295,7 @@ def should_continue(state: ChatbotState) -> str:
 
 - Add retry state (`retry_count`) for specific tool failures
 - Implement exponential backoff for external API calls (web search, LLM)
-- Add circuit breaker pattern for when a tool repeatedly fails
+- Add circuit breaker pattern for when a tool repeatedly fails ([Circuit Breaker Pattern, Azure Architecture Center](https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker))
 
 ______________________________________________________________________
 
@@ -305,7 +307,7 @@ The API returns a complete response after the full graph run finishes. Users see
 
 ### 7.2 Recommended: LangGraph Streaming
 
-LangGraph supports multiple stream modes that can be combined:
+LangGraph supports multiple stream modes that can be combined ([Streaming Concepts](https://langchain-ai.github.io/langgraph/cloud/concepts/streaming/), [Stream Values How-To](https://langchain-ai.github.io/langgraph/how-tos/stream-values/)):
 
 | Mode         | What it streams                 | Use case                |
 | ------------ | ------------------------------- | ----------------------- |
@@ -337,7 +339,7 @@ The project uses `structlog` for structured logging throughout, with the orchest
 
 ### 8.2 Recommended: Add LangSmith Tracing
 
-LangSmith provides agent-specific observability that structlog cannot: nested span trees for LLM calls, tool invocations, and graph transitions; token usage and cost tracking; trace-based evaluation datasets.
+LangSmith provides agent-specific observability that structlog cannot: nested span trees for LLM calls, tool invocations, and graph transitions; token usage and cost tracking; trace-based evaluation datasets ([LangSmith Observability](https://docs.smith.langchain.com/observability)).
 
 **Setup (minimal):**
 
@@ -348,7 +350,7 @@ LANGSMITH_API_KEY=lsv2_...
 LANGSMITH_PROJECT=scaffolding
 ```
 
-No code changes required for basic tracing. LangChain/LangGraph operations are automatically captured.
+No code changes required for basic tracing. LangChain/LangGraph operations are automatically captured ([Tracing LangGraph Apps](https://docs.smith.langchain.com/observability/how_to_guides/trace_with_langgraph)).
 
 **Enhanced tracing with metadata:**
 
@@ -405,7 +407,7 @@ ______________________________________________________________________
 
 ### 11.1 Swarm Pattern (Instead of Supervisor)
 
-LangGraph's `langgraph-swarm` library enables agents to hand off to each other directly via explicit handoff tools, without a central supervisor. The system remembers the last-active agent so follow-up messages continue seamlessly.
+LangGraph's `langgraph-swarm` library ([GitHub](https://github.com/langchain-ai/langgraph-swarm-py)) enables agents to hand off to each other directly via explicit handoff tools, without a central supervisor. The system remembers the last-active agent so follow-up messages continue seamlessly. OpenAI's original Swarm framework ([GitHub](https://github.com/openai/swarm)) explored the same concept as an educational reference.
 
 **When to consider:** If you add 4+ agents and the supervisor routing prompt becomes complex. Swarm reduces the single-point-of-failure risk of the supervisor.
 
@@ -444,7 +446,7 @@ ______________________________________________________________________
 ### Long-Term (High Effort)
 
 9. **Implement RAG for knowledge base**: Vector store embeddings, semantic search tool, replace catalog prompt injection
-1. **Add human-in-the-loop**: Approval workflows for sensitive operations using `interrupt()`
+1. **Add human-in-the-loop**: Approval workflows for sensitive operations using `interrupt()` ([HITL Concepts](https://langchain-ai.github.io/langgraph/concepts/human_in_the_loop/))
 1. **Cross-thread memory via Stores**: Persistent agent memory across conversations
 1. **Evaluate swarm pattern**: If agent count grows beyond 4-5
 
@@ -452,14 +454,47 @@ ______________________________________________________________________
 
 ## Sources
 
-- [LangGraph Workflows and Agents Concepts](https://docs.langchain.com/oss/python/langgraph/workflows-agents)
-- [Building LangGraph: Design from First Principles](https://blog.langchain.com/building-langgraph/)
-- [LangGraph Persistence Documentation](https://docs.langchain.com/oss/python/langgraph/persistence)
-- [LangGraph Interrupts Documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)
-- [LangGraph Test Documentation](https://docs.langchain.com/oss/python/langgraph/test)
-- [LangSmith Observability Platform](https://www.langchain.com/langsmith/observability)
-- [Multi-Source RAG Systems with LangGraph](https://ragaboutit.com/how-to-build-multi-source-rag-systems-with-langgraph-the-complete-enterprise-knowledge-integration-guide/)
-- [Adaptive RAG Systems with LangGraph](https://www.analyticsvidhya.com/blog/2025/03/adaptive-rag-systems-with-langgraph/)
-- [LangGraph Swarm vs Supervisor](https://medium.com/@sameernasirshaikh/langgraph-swarm-vs-langgraph-supervisor-ce8194837d0a)
-- [Mastering LangGraph Checkpointing 2025](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025)
-- [fastapi-langgraph-agent-production-ready-template](https://github.com/wassim249/fastapi-langgraph-agent-production-ready-template)
+### Official LangGraph Documentation
+
+- [Persistence Concepts](https://langchain-ai.github.io/langgraph/concepts/persistence/): checkpointers, thread-based state, SqliteSaver, PostgresSaver
+- [Persistence How-To](https://langchain-ai.github.io/langgraph/how-tos/persistence/): adding thread-level persistence to graphs
+- [ToolNode API Reference](https://langchain-ai.github.io/langgraph/reference/prebuilt/): `handle_tool_errors` parameter documentation
+- [Streaming Concepts](https://langchain-ai.github.io/langgraph/cloud/concepts/streaming/): values, updates, messages, events, debug stream modes
+- [Stream Values How-To](https://langchain-ai.github.io/langgraph/how-tos/stream-values/): streaming full graph state
+- [Human-in-the-Loop Concepts](https://langchain-ai.github.io/langgraph/concepts/human_in_the_loop/): `interrupt()`, approve/reject, edit state patterns
+- [Memory Concepts](https://langchain-ai.github.io/langgraph/concepts/memory/): checkpointers (thread-scoped) vs Store (cross-thread)
+- [Recursion Limit How-To](https://langchain-ai.github.io/langgraph/how-tos/recursion-limit/): setting `recursion_limit`, `RemainingSteps` annotation
+- [GraphRecursionError Reference](https://langchain-ai.github.io/langgraph/troubleshooting/errors/): default limit of 25, error handling
+- [Hierarchical Agent Teams Tutorial](https://langchain-ai.github.io/langgraph/tutorials/multi_agent/hierarchical_agent_teams/): supervisor with mid-level and top-level routing
+- [Multi-Agent Collaboration Tutorial](https://langchain-ai.github.io/langgraph/tutorials/multi_agent/multi-agent-collaboration/): divide-and-conquer multi-agent networks
+- [Adaptive RAG Tutorial](https://langchain-ai.github.io/langgraph/tutorials/rag/langgraph_adaptive_rag/): query-routed retrieval with self-correcting document grading
+- [Self-RAG Tutorial](https://langchain-ai.github.io/langgraph/tutorials/rag/langgraph_self_rag_local/): corrective RAG with self-reflection using local LLMs
+
+### Official LangChain Documentation
+
+- [BaseChatModel API Reference](https://python.langchain.com/api_reference/core/language_models/langchain_core.language_models.chat_models.BaseChatModel.html): abstract base class for provider-agnostic typing
+- [Chat Models Concepts](https://python.langchain.com/docs/concepts/chat_models/): `configurable_alternatives()` pattern for swappable providers
+- [Tavily Search Integration](https://python.langchain.com/docs/integrations/tools/tavily_search/): setup and usage for web search tool
+
+### LangSmith
+
+- [LangSmith Observability](https://docs.smith.langchain.com/observability): tracing concepts, evaluation, production monitoring
+- [Tracing LangGraph Apps](https://docs.smith.langchain.com/observability/how_to_guides/trace_with_langgraph): `LANGCHAIN_TRACING_V2`, API key setup
+- [Tracing LangChain Apps](https://docs.smith.langchain.com/observability/how_to_guides/trace_with_langchain): `@traceable` decorator
+
+### Industry References
+
+- [Building Effective Agents](https://www.anthropic.com/research/building-effective-agents) (Anthropic): workflow vs agent tradeoffs, prompt chaining, routing, orchestrator-worker, evaluator-optimizer patterns
+- [How to Build an Agent](https://blog.langchain.com/how-to-build-an-agent/) (LangChain Blog): iterative agent development methodology
+- [RAG vs Long Context Windows](https://redis.io/blog/rag-vs-large-context-window-ai-apps/) (Redis): cost, latency, accuracy tradeoffs, "lost in the middle" problem
+- [Circuit Breaker Pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker) (Azure Architecture Center): Closed/Open/Half-Open state management for resilience
+- [SSE for LLM Streaming](https://apidog.com/blog/stream-llm-responses-using-sse/): Server-Sent Events as the standard protocol for token-by-token LLM streaming
+
+### GitHub Repositories
+
+- [langgraph-supervisor-py](https://github.com/langchain-ai/langgraph-supervisor-py): official supervisor library for hierarchical multi-agent systems
+- [langgraph-swarm-py](https://github.com/langchain-ai/langgraph-swarm-py): official swarm library for peer-to-peer agent handoffs
+- [openai/swarm](https://github.com/openai/swarm): OpenAI's educational multi-agent orchestration framework
+- [langgraph-101](https://github.com/langchain-ai/langgraph-101): hands-on tutorials for LangGraph fundamentals and multi-agent patterns
+- [fastapi-langgraph-agent-production-ready-template](https://github.com/wassim249/fastapi-langgraph-agent-production-ready-template): production FastAPI template with auth, metrics, PostgreSQL
+- [LangMem Library](https://langchain-ai.github.io/langmem/): semantic memory extraction and hot-path memory with LangGraph Store
