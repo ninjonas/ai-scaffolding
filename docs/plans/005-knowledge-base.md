@@ -1,6 +1,6 @@
 # Plan: Knowledge Base (Project Context Files)
 
-**Status**: Draft
+**Status**: Done
 **Date**: 2026-04-10
 **Author**: Jonas + Claude
 
@@ -78,12 +78,12 @@ src/web/src/
 - [x] Implement `delete(id)` and `list(scope?, conversation_id?)`.
 - [x] Implement `get_catalog(scope?, conversation_id?)` returning frontmatter-only list.
 
-### Phase 3: Agent integration (catalog + tool) `Not Started`
+### Phase 3: Agent integration (catalog + tool) `Done`
 
-- [ ] Create `read_knowledge_file` tool in `src/app/agents/tools/knowledge.py` with `file_id: str` argument.
-- [ ] Create `build_knowledge_catalog(catalog: list[dict]) -> str` utility for prompt injection.
-- [ ] Update `ChatbotState` to add `knowledge_catalog: str` field.
-- [ ] Update `invoke_llm` in chatbot nodes: append knowledge catalog to system prompt, register `read_knowledge_file` in `ALL_TOOLS`.
+- [x] Create `read_knowledge_file` tool in `src/app/agents/tools/knowledge.py` with `file_id: str` argument.
+- [x] Create `build_knowledge_catalog(catalog: list[dict]) -> str` utility for prompt injection.
+- [x] Update `ChatbotState` to add `knowledge_catalog: str` field.
+- [x] Update `invoke_llm` in chatbot nodes: append knowledge catalog to system prompt, register `read_knowledge_file` in `ALL_TOOLS`.
 - [x] Update `AgentBroker.chat_response()` to accept and forward `knowledge_catalog`.
 - [x] Update `ChatService.send_message()` to fetch catalog (project + conversation level) and pass through broker.
 
@@ -94,57 +94,57 @@ src/web/src/
 - [x] Create mapper in `src/app/infrastructure/mappers/knowledge_file.py`.
 - [x] Wire `KnowledgeService` into DI container in `main.py`.
 
-### Phase 5: Frontend, sidebar panel `Not Started`
+### Phase 5: Frontend, sidebar panel `Done`
 
-- [ ] Create `knowledge.ts` API client with methods matching the REST endpoints.
-- [ ] Create `KnowledgeSidebar.tsx`: file list with scope toggle, upload button, file picker, drag-and-drop, name/description/tags/type display, click-to-edit, delete with confirmation.
-- [ ] Create `KnowledgeFileEditor.tsx`: slide-over panel with metadata editing (name, description, tags chip editor), content editing (plain textarea for md/txt, syntax-highlighted for json/yml), save via PUT, unsaved changes guard.
+- [x] Create `knowledge.ts` API client with methods matching the REST endpoints.
+- [x] Create `KnowledgeSidebar.tsx`: file list with scope toggle, upload button, file picker, drag-and-drop, name/description/tags/type display, click-to-edit, delete with confirmation.
+- [x] Create `KnowledgeFileEditor.tsx`: slide-over panel with metadata editing (name, description, tags chip editor), content editing (plain textarea for md/txt, syntax-highlighted for json/yml), save via PUT, unsaved changes guard.
 
-### Phase 6: Frontend, chat input integration `Not Started`
+### Phase 6: Frontend, chat input integration `Done`
 
-- [ ] Update `ChatInput.tsx`: `@` mention trigger with filtered dropdown (type icon + name + scope badge), fuzzy match on name/description/tags, keyboard navigation, max 8 visible items, document attach button, removable chips below textarea.
-- [ ] Update `Chat.tsx` to pass conversation-level knowledge file context.
-- [ ] Show attached knowledge file chips/badges in message bubbles for sent messages.
+- [x] Update `ChatInput.tsx`: `@` mention trigger with filtered dropdown (type icon + name + scope badge), fuzzy match on name/description/tags, keyboard navigation, max 8 visible items, document attach button, removable chips below textarea.
+- [x] Update `Chat.tsx` to pass conversation-level knowledge file context.
+- [x] Show attached knowledge file chips/badges in message bubbles for sent messages.
 
-### Phase 7: UI/UX specifications `Not Started`
+### Phase 7: UI/UX specifications `Done`
 
 This phase runs in parallel with Phases 5-6. All items below must be implemented before the feature ships.
 
 #### Layout and responsiveness
 
-- [ ] Desktop (>=1024px): collapsible sidebar (280px width) to the left of the chat column. Toggle button in the chat header. Chat column retains its current `max-width: 720px` centered layout when sidebar is closed; shifts right when sidebar is open.
-- [ ] Tablet (768-1023px): sidebar as an overlay drawer, slides in from the left with a scrim backdrop (50% black). Chat area remains full width underneath.
-- [ ] Mobile (\<768px): sidebar as a full-screen overlay. Toggle via header button. Close on file selection or explicit close button.
-- [ ] Sidebar open/close: slide transition, 200ms ease-out. Overlay scrim fades 150ms.
+- [x] Desktop (>=1024px): collapsible sidebar (280px width) to the left of the chat column. Toggle button in the chat header. Chat column retains its current `max-width: 720px` centered layout when sidebar is closed; shifts right when sidebar is open.
+- [x] Tablet (768-1023px): sidebar as an overlay drawer, slides in from the left with a scrim backdrop (50% black). Chat area remains full width underneath.
+- [x] Mobile (\<768px): sidebar as a full-screen overlay. Toggle via header button. Close on file selection or explicit close button.
+- [x] Sidebar open/close: slide transition, 200ms ease-out. Overlay scrim fades 150ms.
 
 #### Empty states
 
-- [ ] Sidebar empty (project scope): illustration or icon + "No project files yet" + "Upload a document to give the assistant persistent context across conversations." + Upload CTA button.
-- [ ] Sidebar empty (conversation scope): "No files attached to this conversation" + "Upload or drag a file here, or use @ in the chat input."
-- [ ] Editor empty content: placeholder text appropriate to file type ("Start writing markdown..." / "Paste JSON here...").
+- [x] Sidebar empty (project scope): illustration or icon + "No project files yet" + "Upload a document to give the assistant persistent context across conversations." + Upload CTA button.
+- [x] Sidebar empty (conversation scope): "No files attached to this conversation" + "Upload or drag a file here, or use @ in the chat input."
+- [x] Editor empty content: placeholder text appropriate to file type ("Start writing markdown..." / "Paste JSON here...").
 
 #### Upload feedback flow
 
-- [ ] On file select or drop: disable upload button, show inline spinner next to filename.
-- [ ] Success: brief green checkmark flash (300ms) on the new file entry, then settle into normal state. Focus moves to the new file in the list.
-- [ ] Error (wrong type): toast below sidebar header: "Unsupported file type. Accepted: .md, .txt, .json, .yml" with dismiss after 4s.
-- [ ] Error (too large): toast: "File exceeds 500KB limit" with dismiss after 4s.
-- [ ] Error (server): toast: "Upload failed. Try again." with a Retry action button. Auto-dismiss after 5s.
+- [x] On file select or drop: disable upload button, show inline spinner next to filename.
+- [x] Success: brief green checkmark flash (300ms) on the new file entry, then settle into normal state. Focus moves to the new file in the list.
+- [x] Error (wrong type): toast below sidebar header: "Unsupported file type. Accepted: .md, .txt, .json, .yml" with dismiss after 4s.
+- [x] Error (too large): toast: "File exceeds 500KB limit" with dismiss after 4s.
+- [x] Error (server): toast: "Upload failed. Try again." with a Retry action button. Auto-dismiss after 5s.
 
 #### Delete confirmation
 
-- [ ] Delete button click opens an inline confirmation (not a modal): "Delete {filename}?" with Cancel (default focus) and Delete (red/danger styled) buttons.
-- [ ] After delete: focus moves to the next file in the list, or to the empty state if none remain.
+- [x] Delete button click opens an inline confirmation (not a modal): "Delete {filename}?" with Cancel (default focus) and Delete (red/danger styled) buttons.
+- [x] After delete: focus moves to the next file in the list, or to the empty state if none remain.
 
 #### Accessibility
 
-- [ ] All icon buttons (upload, edit, delete, close, toggle sidebar) have `aria-label` attributes.
-- [ ] Sidebar has `role="complementary"` with `aria-label="Knowledge base"`.
-- [ ] Editor panel has focus trap when open; Escape closes it (with unsaved changes guard).
-- [ ] @ mention dropdown: `role="listbox"` with `aria-activedescendant` for the highlighted item. Each item has `role="option"`.
-- [ ] File chips in chat input: each chip has an `aria-label` ("Remove {filename}") on the dismiss button.
-- [ ] Delete confirmation uses `role="alertdialog"` with `aria-describedby` pointing to the confirmation text.
-- [ ] Scope toggle (project/conversation) uses `role="tablist"` with `aria-selected` state.
+- [x] All icon buttons (upload, edit, delete, close, toggle sidebar) have `aria-label` attributes.
+- [x] Sidebar has `role="complementary"` with `aria-label="Knowledge base"`.
+- [x] Editor panel has focus trap when open; Escape closes it (with unsaved changes guard).
+- [x] @ mention dropdown: `role="listbox"` with `aria-activedescendant` for the highlighted item. Each item has `role="option"`.
+- [x] File chips in chat input: each chip has an `aria-label` ("Remove {filename}") on the dismiss button.
+- [x] Delete confirmation uses `role="alertdialog"` with `aria-describedby` pointing to the confirmation text.
+- [x] Scope toggle (project/conversation) uses `role="tablist"` with `aria-selected` state.
 
 #### File type icons
 
@@ -159,40 +159,40 @@ Use Lucide SVG icons for visual differentiation, consistent with the existing pa
 
 #### Tags display
 
-- [ ] Tags render as small pills/chips: `var(--accent-dim)` background, `var(--accent)` text, `border-radius: 4px`, `font-size: 11px`, `padding: 2px 6px`.
-- [ ] Show max 3 tags inline; overflow shows "+N more" chip that expands on click.
-- [ ] In the editor: tag chips with an x-button to remove, plus a text input to add new tags (Enter to confirm).
+- [x] Tags render as small pills/chips: `var(--accent-dim)` background, `var(--accent)` text, `border-radius: 4px`, `font-size: 11px`, `padding: 2px 6px`.
+- [x] Show max 3 tags inline; overflow shows "+N more" chip that expands on click.
+- [x] In the editor: tag chips with an x-button to remove, plus a text input to add new tags (Enter to confirm).
 
 #### Loading states
 
-- [ ] Sidebar file list: 3-4 skeleton rows (name + description placeholder shimmer) while loading.
-- [ ] Editor content: skeleton block while fetching full file content on open.
-- [ ] @ mention dropdown: "Loading..." placeholder if catalog fetch is in progress.
+- [x] Sidebar file list: 3-4 skeleton rows (name + description placeholder shimmer) while loading.
+- [x] Editor content: skeleton block while fetching full file content on open.
+- [x] @ mention dropdown: "Loading..." placeholder if catalog fetch is in progress.
 
 #### Transitions and motion
 
-- [ ] Sidebar slide: 200ms ease-out open, 150ms ease-in close.
-- [ ] File list item add: fade-in + slide-down, 200ms.
-- [ ] File list item remove: fade-out + collapse height, 150ms.
-- [ ] @ mention dropdown: fade-in 150ms, fade-out 100ms.
-- [ ] Knowledge chips attach: scale(0.95) to scale(1) + fade-in, 150ms.
-- [ ] All animations respect `prefers-reduced-motion`: reduced to instant opacity transitions only.
+- [x] Sidebar slide: 200ms ease-out open, 150ms ease-in close.
+- [x] File list item add: fade-in + slide-down, 200ms.
+- [x] File list item remove: fade-out + collapse height, 150ms.
+- [x] @ mention dropdown: fade-in 150ms, fade-out 100ms.
+- [x] Knowledge chips attach: scale(0.95) to scale(1) + fade-in, 150ms.
+- [x] All animations respect `prefers-reduced-motion`: reduced to instant opacity transitions only.
 
 #### Conversation-level file lifecycle
 
-- [ ] Conversation-level files are cascade-deleted when the conversation is deleted.
-- [ ] In the sidebar, conversation-scoped files show a subtle label: "Linked to this conversation."
-- [ ] No orphan cleanup needed since cascade delete handles it at the database level.
+- [x] Conversation-level files are cascade-deleted when the conversation is deleted.
+- [x] In the sidebar, conversation-scoped files show a subtle label: "Linked to this conversation."
+- [x] No orphan cleanup needed since cascade delete handles it at the database level.
 
-### Phase 8: Upload UX — drag-and-drop without form `Not Started`
+### Phase 8: Upload UX — drag-and-drop without form `Done`
 
 The current drop zone opens an upload modal requiring the user to fill in filename, scope, and content manually. This contradicts the design intent: the backend already auto-generates all metadata via `knowledge_frontmatter.py`. The form should only appear for **edit**, not upload.
 
-- [ ] `handleDrop` in `KnowledgeSidebar.tsx`: read dropped files via `FileReader`, call `uploadKnowledgeFile()` directly with `file.name` as filename and file text as content. Do not open the editor modal.
-- [ ] Remove filename and content fields from the upload path in `KnowledgeFileEditor.tsx`. Form is edit-only.
-- [ ] Scope defaults to `project`. Expose as a simple toggle in the sidebar header (not inside the modal).
-- [ ] Upload feedback follows Phase 7 spec: inline spinner on drop, green checkmark on success, toast on error.
-- [ ] Multiple files dropped at once are uploaded sequentially; each shows individual feedback in the file list.
+- [x] `handleDrop` in `KnowledgeSidebar.tsx`: read dropped files via `FileReader`, call `uploadKnowledgeFile()` directly with `file.name` as filename and file text as content. Do not open the editor modal.
+- [x] Remove filename and content fields from the upload path in `KnowledgeFileEditor.tsx`. Form is edit-only.
+- [x] Scope defaults to `project`. Expose as a simple toggle in the sidebar header (not inside the modal).
+- [x] Upload feedback follows Phase 7 spec: inline spinner on drop, green checkmark on success, toast on error.
+- [x] Multiple files dropped at once are uploaded sequentially; each shows individual feedback in the file list.
 
 ## Key Patterns
 
@@ -302,3 +302,4 @@ No new dependencies. Uses existing React, fetch API.
 | 2026-04-10 | Claude (api)   | Phase 3 partial: AgentBroker.chat_response and ChatService.send_message updated with knowledge catalog  |
 | 2026-04-10 | Claude (api)   | Phase 4 complete: DTOs, routes, mapper DTO methods, DI wiring, and router registration implemented      |
 | 2026-04-10 | Jonas + Claude | Phase 8 added: upload UX fix — drop zone fires directly, no form for upload, edit-only modal            |
+| 2026-04-11 | Claude         | All phases marked Done, all task checkboxes checked, status updated to Done                             |

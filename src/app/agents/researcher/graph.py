@@ -19,8 +19,8 @@ def create_researcher_graph(llm: ChatOpenAI) -> StateGraph:
 
     tool_node = ToolNode(RESEARCHER_TOOLS)
 
-    def llm_node(state: ResearcherState) -> dict:
-        return invoke_researcher(state, llm)
+    async def llm_node(state: ResearcherState) -> dict:
+        return await invoke_researcher(state, llm)
 
     graph = StateGraph(ResearcherState)
     graph.add_node(NODE_LLM, llm_node)

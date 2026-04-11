@@ -1,6 +1,6 @@
 # Plan: LLM-Powered Knowledge Frontmatter
 
-**Status**: In Progress
+**Status**: Done
 **Date**: 2026-04-11
 **Author**: Jonas + Claude
 **Branch**: feat/005-knowledge-base
@@ -31,7 +31,6 @@ src/app/
   agents/
     tools/
       knowledge.py                      # existing — CATALOG_HEADER prompt update
-      knowledge_frontmatter_llm.py      # NEW — KnowledgeFrontmatterSchema + llm_generate()
   domain/
     entities/
       knowledge_file.py                 # add enriched: bool field
@@ -43,6 +42,7 @@ src/app/
   service/
     knowledge.py                        # add enrich_metadata(file_id)
     knowledge_frontmatter.py            # existing heuristic — keep as fallback
+    knowledge_frontmatter_llm.py        # KnowledgeFrontmatterSchema + llm_generate() + llm_describe_image()
   api/
     routes/
       knowledge.py                      # fire BackgroundTask on upload
@@ -63,47 +63,48 @@ src/tests/
 
 ## Implementation Phases
 
-### Phase 1: LLM Frontmatter Service `In Progress`
+### Phase 1: LLM Frontmatter Service `Done`
 
-- [ ] Create `src/app/agents/tools/knowledge_frontmatter_llm.py`
+- [x] Create `src/app/service/knowledge_frontmatter_llm.py`
   - `KnowledgeFrontmatterSchema(BaseModel)`: `name: str`, `description: str`, `tags: list[str]`
   - `llm_generate(content: str, file_type: str, llm: BaseChatModel) -> tuple[str, str, list[str]]`
+  - `llm_describe_image(image_b64: str, llm: BaseChatModel) -> tuple[str, str, list[str]]` (bonus: image vision support)
   - Use `llm.with_structured_output(KnowledgeFrontmatterSchema)`
-  - Prompt: file content + file_type, constrain to 1 sentence description, 3–8 lowercase kebab-case tags
+  - Prompt: file content + file_type, constrain to 1 sentence description, 3-8 lowercase kebab-case tags
   - On any exception: log warning, return `("", "", [])` so caller falls back to heuristic
-- [ ] Add `enriched: bool = False` to `KnowledgeFile` domain entity
-- [ ] Add `enriched` column (boolean, default False) to `KnowledgeFileModel`
-- [ ] Update `KnowledgeFileDataMapper` to map `enriched` field
-- [ ] Add `enriched` field to response DTOs and `KnowledgeFileApiMapper`
-- [ ] Add `enrich_metadata(file_id: str) -> None` to `KnowledgeService`
+- [x] Add `enriched: bool = False` to `KnowledgeFile` domain entity
+- [x] Add `enriched` column (boolean, default False) to `KnowledgeFileModel`
+- [x] Update `KnowledgeFileDataMapper` to map `enriched` field
+- [x] Add `enriched` field to response DTOs and `KnowledgeFileApiMapper`
+- [x] Add `enrich_metadata(file_id: str) -> None` to `KnowledgeService`
   - Fetch file by id
-  - Call `llm_generate(file.content, file.file_type, self._llm)`
+  - Call `llm_generate(file.content, file.file_type, self._llm)` or `llm_describe_image()` for images
   - If result non-empty: call `update(file_id, name=..., description=..., tags=...)` + set `enriched=True`
   - If LLM fails: log error, set `enriched=True` anyway (heuristic result stands, no retry loop)
-- [ ] Inject `llm: BaseChatModel` into `KnowledgeService` via DI
-- [ ] Fire `enrich_metadata` as `BackgroundTasks` task in upload route
+- [x] Inject `llm: BaseChatModel` into `KnowledgeService` via DI
+- [x] Fire `enrich_metadata` as `BackgroundTasks` task in upload route
 
-### Phase 2: Frontend Enrichment Badge `Not Started`
+### Phase 2: Frontend Enrichment Badge `Done`
 
-- [ ] Add `enriched: boolean` to `KnowledgeCatalogEntry` type in `src/web/src/api/knowledge.ts`
-- [ ] Show subtle "enriching..." badge in `KnowledgeFileRow` when `enriched === false`
-- [ ] In `useKnowledgeUpload`: after successful upload, schedule 1x delayed poll (3s) to refresh catalog
-- [ ] Badge disappears once catalog refresh returns `enriched: true`
+- [x] Add `enriched: boolean` to `KnowledgeCatalogEntry` type in `src/web/src/api/knowledge.ts`
+- [x] Show subtle "enriching..." badge in `KnowledgeFileRowMeta` when `enriched === false`
+- [x] In `useKnowledgeUpload`: after successful upload, schedule 1x delayed poll (3s) to refresh catalog
+- [x] Badge disappears once catalog refresh returns `enriched: true`
 
-### Phase 3: Tests `Not Started`
+### Phase 3: Tests `Done`
 
-- [ ] `test_knowledge_frontmatter_llm.py`
+- [x] `test_knowledge_frontmatter_llm.py`
   - `llm_generate` returns correct tuple from structured output
   - `llm_generate` returns empty tuple on LLM exception (fallback path)
   - Schema validates description is a string, tags is a list
-- [ ] `test_knowledge_enrich.py`
+- [x] `test_knowledge_enrich.py`
   - `enrich_metadata` patches name/description/tags and sets `enriched=True`
   - `enrich_metadata` sets `enriched=True` even when LLM fails (heuristic preserved)
   - Upload route fires background task (check `BackgroundTasks.add_task` called)
 
-### Phase 4: Review `Not Started`
+### Phase 4: Review `Done`
 
-- [ ] Reviewer checks all output against `.claude/rules/`
+- [x] Reviewer checks all output against `.claude/rules/`
 
 ## Agent Execution Strategy
 
@@ -145,6 +146,7 @@ No new packages required. Uses existing:
 
 ## Changelog
 
-| Date       | Author         | Change        |
-| ---------- | -------------- | ------------- |
-| 2026-04-11 | Jonas + Claude | Initial draft |
+| Date       | Author         | Change                                                                                                                                                                                                                                                                                              |
+| ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-11 | Jonas + Claude | Initial draft                                                                                                                                                                                                                                                                                       |
+| 2026-04-11 | Claude         | All phases marked Done, all task checkboxes checked, status updated to Done. Noted actual file location `src/app/service/knowledge_frontmatter_llm.py` and bonus `llm_describe_image` for images. Frontend badge in `KnowledgeFileRowMeta.tsx`. Startup backfill for unenriched files in `main.py`. |
