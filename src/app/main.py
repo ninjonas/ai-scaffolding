@@ -70,15 +70,11 @@ async def lifespan(app: FastAPI):
     search_knowledge = make_search_knowledge_tool(knowledge_searcher)
     search_memory = make_search_memory_tool(memory_searcher)
 
-    agent_graph = create_supervisor_graph(
-        llm, extra_tools=[search_knowledge, search_memory], checkpointer=checkpointer
-    )
+    agent_graph = create_supervisor_graph(llm, extra_tools=[search_knowledge, search_memory], checkpointer=checkpointer)
     orchestrator = AgentOrchestrator(agent_graph)
     broker = AgentBroker(orchestrator)
     uow = SQLAlchemyUnitOfWork(session_factory)
-    knowledge_service = KnowledgeService(
-        uow_factory=knowledge_uow_factory, llm=llm, indexer=knowledge_indexer
-    )
+    knowledge_service = KnowledgeService(uow_factory=knowledge_uow_factory, llm=llm, indexer=knowledge_indexer)
     chat_service = ChatService(
         broker=broker,
         unit_of_work=uow,

@@ -12,9 +12,7 @@ class _FakeSearcher:
     def __init__(self, results: list[dict]):
         self._results = results
 
-    async def search(
-        self, query: str, scope: str, conversation_id: str | None = None, top_k: int = 5
-    ) -> list[dict]:
+    async def search(self, query: str, scope: str, conversation_id: str | None = None, top_k: int = 5) -> list[dict]:
         return self._results
 
 

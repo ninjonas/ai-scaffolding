@@ -62,11 +62,7 @@ async def invoke_llm(state: ChatbotState, llm, extra_tools: list | None = None) 
     if images and is_first_pass:
         log.info("chatbot_attaching_images", count=len(images))
         last_human = next(
-            (
-                i
-                for i in range(len(chat_messages) - 1, -1, -1)
-                if isinstance(chat_messages[i], HumanMessage)
-            ),
+            (i for i in range(len(chat_messages) - 1, -1, -1) if isinstance(chat_messages[i], HumanMessage)),
             None,
         )
         if last_human is not None:
@@ -116,9 +112,7 @@ async def await_memory_confirm(state: ChatbotState) -> dict:
         }
     )
     if confirmed:
-        context = "\n\n".join(
-            f"[{r['conversation_id']} | {r['created_at']}]\n{r['excerpt']}" for r in results
-        )
+        context = "\n\n".join(f"[{r['conversation_id']} | {r['created_at']}]\n{r['excerpt']}" for r in results)
         return {
             "messages": [SystemMessage(content=f"## Past Context\n\n{context}")],
             "memory_results": [],

@@ -20,3 +20,4 @@ EMBEDDING_MODEL_DEFAULT = "text-embedding-3-small"
 # Interrupt fields
 FIELD_KEY_INTERRUPT = "interrupt"
 FIELD_KEY_INTERRUPT_TYPE = "type"
+FIELD_KEY_CONTENT = "content"

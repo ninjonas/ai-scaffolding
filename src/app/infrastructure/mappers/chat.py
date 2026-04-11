@@ -7,8 +7,7 @@ class ChatMapper:
     @staticmethod
     def to_response_dto(message: Message, conversation_id: str) -> ChatResponseDTO:
         tool_calls = [
-            ToolCallDTO(name=tc.get(FIELD_KEY_NAME, ""), args=tc.get(FIELD_KEY_ARGS, {}))
-            for tc in message.tool_calls
+            ToolCallDTO(name=tc.get(FIELD_KEY_NAME, ""), args=tc.get(FIELD_KEY_ARGS, {})) for tc in message.tool_calls
         ]
         return ChatResponseDTO(
             message=message.content,

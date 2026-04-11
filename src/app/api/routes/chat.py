@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from app.api.dto.chat import ChatRequestDTO, ChatResponseDTO, ResumeRequestDTO
 from app.infrastructure.mappers.chat import ChatMapper
 from app.service.chat import ChatService
-from app.shared.field_keys import FIELD_KEY_INTERRUPT, FIELD_KEY_INTERRUPT_TYPE
+from app.shared.field_keys import FIELD_KEY_CONTENT, FIELD_KEY_INTERRUPT, FIELD_KEY_INTERRUPT_TYPE
 
 log = structlog.get_logger()
 
@@ -50,12 +50,12 @@ async def send_message(
         interrupt_data = result[FIELD_KEY_INTERRUPT]
         dto = ChatResponseDTO(
             message="",
-            conversation_id=request.conversation_id or "",
+            conversation_id=result["conversation_id"],
             interrupt=interrupt_data,
         )
         log.info(
             "chat_interrupt_sent",
-            conversation_id=request.conversation_id,
+            conversation_id=result["conversation_id"],
             interrupt_type=interrupt_data.get(FIELD_KEY_INTERRUPT_TYPE),
         )
         return dto
@@ -91,10 +91,8 @@ async def resume_conversation(
             interrupt=result[FIELD_KEY_INTERRUPT],
         )
     else:
-        content = result.get("content", "")
+        content = result.get(FIELD_KEY_CONTENT, "")
         tool_calls = result.get("tool_calls", [])
-        dto = ChatResponseDTO(
-            message=content, conversation_id=conversation_id, tool_calls=tool_calls
-        )
+        dto = ChatResponseDTO(message=content, conversation_id=conversation_id, tool_calls=tool_calls)
     log.info("chat_resume_response_sent", conversation_id=conversation_id)
     return dto

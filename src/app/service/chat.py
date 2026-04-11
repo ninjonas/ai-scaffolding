@@ -13,7 +13,7 @@ from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from app.infrastructure.vector.message_indexer import MessageIndexer
 from app.service.knowledge import KnowledgeService
 from app.service.knowledge_context import build_conversation_context, build_project_context
-from app.shared.field_keys import FIELD_KEY_INTERRUPT, FIELD_KEY_INTERRUPT_TYPE
+from app.shared.field_keys import FIELD_KEY_CONTENT, FIELD_KEY_INTERRUPT, FIELD_KEY_INTERRUPT_TYPE
 
 log = structlog.get_logger()
 
@@ -67,9 +67,7 @@ class ChatService:
             image_filenames,
             conversation.id,
         )
-        await asyncio.gather(
-            *[self._knowledge_service.enrich_metadata(kf.id) for kf in uploaded_files]
-        )
+        await asyncio.gather(*[self._knowledge_service.enrich_metadata(kf.id) for kf in uploaded_files])
 
         project_files, conversation_files = await asyncio.gather(
             self._knowledge_service.list(scope=SCOPE_PROJECT),
@@ -78,9 +76,7 @@ class ChatService:
                 conversation_id=conversation.id,
             ),
         )
-        knowledge_context = build_project_context(project_files) + build_conversation_context(
-            conversation_files
-        )
+        knowledge_context = build_project_context(project_files) + build_conversation_context(conversation_files)
         log.info(
             "knowledge_context_attached",
             conversation_id=conversation.id,
@@ -102,28 +98,14 @@ class ChatService:
                 conversation_id=conversation.id,
                 interrupt_type=response[FIELD_KEY_INTERRUPT].get(FIELD_KEY_INTERRUPT_TYPE),
             )
+            response["conversation_id"] = conversation.id
             return response
 
-        raw_content = response["content"]
-        if not raw_content:
-            log.warning("chat_empty_response", conversation_id=conversation.id)
-            raw_content = "Sorry, I didn't get a response. Please try again."
-        assistant_message = Message(
-            content=raw_content,
-            role=MessageRole.ASSISTANT,
-            tool_calls=response.get("tool_calls", []),
-        )
-
-        async with self._uow as uow:
-            conversation.add_message(assistant_message)
-            await uow.conversations.save(conversation)
-            await uow.commit()
+        assistant_message = await self._persist_assistant_reply(conversation, response)
 
         if self._message_indexer:
             await self._message_indexer.index(**MessageIndexMapper.to_index_params(user_message))
-            await self._message_indexer.index(
-                **MessageIndexMapper.to_index_params(assistant_message)
-            )
+            await self._message_indexer.index(**MessageIndexMapper.to_index_params(assistant_message))
 
         duration = time.monotonic() - start  # timing: operation-level
         log.info(
@@ -146,8 +128,37 @@ class ChatService:
         """
         log.info("resume_start", conversation_id=conversation_id, approved=approved)
         result = await self._broker.resume(conversation_id, approved)
+
+        async with self._uow as uow:
+            conversation = await uow.conversations.get_by_id(conversation_id)
+
+        if conversation:
+            assistant_message = await self._persist_assistant_reply(conversation, result)
+            if self._message_indexer:
+                await self._message_indexer.index(**MessageIndexMapper.to_index_params(assistant_message))
+
         log.info("resume_complete", conversation_id=conversation_id)
         return result
+
+    async def _persist_assistant_reply(
+        self,
+        conversation: Conversation,
+        response: dict,
+    ) -> Message:
+        raw_content = response.get(FIELD_KEY_CONTENT, "")
+        if not raw_content:
+            log.warning("chat_empty_response", conversation_id=conversation.id)
+            raw_content = "Sorry, I didn't get a response. Please try again."
+        assistant_message = Message(
+            content=raw_content,
+            role=MessageRole.ASSISTANT,
+            tool_calls=response.get("tool_calls", []),
+        )
+        async with self._uow as uow:
+            conversation.add_message(assistant_message)
+            await uow.conversations.save(conversation)
+            await uow.commit()
+        return assistant_message
 
     async def _index_images(
         self,
