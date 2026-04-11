@@ -1,3 +1,5 @@
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { ToolCall } from '../api/chat';
 
 interface KnowledgeChip {
@@ -47,6 +49,14 @@ function UserMessageContent({ images, content }: { images?: string[]; content: s
   );
 }
 
+function AssistantMessageContent({ content }: { content: string }) {
+  return (
+    <div className="message-content markdown-body">
+      <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+    </div>
+  );
+}
+
 export function MessageBubble({ role, content, toolCalls, images, loading }: MessageBubbleProps) {
   return (
     <div className={`message message-${role}${loading ? ' message-loading' : ''}`}>
@@ -57,6 +67,8 @@ export function MessageBubble({ role, content, toolCalls, images, loading }: Mes
           <span />
           <span />
         </div>
+      ) : role === 'assistant' ? (
+        <AssistantMessageContent content={content} />
       ) : (
         <UserMessageContent images={images} content={content} />
       )}
