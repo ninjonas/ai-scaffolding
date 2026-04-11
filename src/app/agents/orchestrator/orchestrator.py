@@ -13,6 +13,8 @@ from typing import Any
 
 import structlog
 
+from app.shared.field_keys import FIELD_KEY_INTERRUPT, FIELD_KEY_INTERRUPT_TYPE
+
 log = structlog.get_logger()
 
 
@@ -67,6 +69,18 @@ class AgentOrchestrator:
 
             return mapped_result
         except Exception as exc:
+            from langgraph.errors import GraphInterrupt
+
+            if isinstance(exc, GraphInterrupt):
+                duration_s = time.monotonic() - start
+                interrupt_data = exc.args[0][0] if exc.args and exc.args[0] else {}
+                bound_log.info(
+                    f"{operation_name}_interrupted",
+                    duration_s=round(duration_s, 3),
+                    interrupt_type=interrupt_data.get(FIELD_KEY_INTERRUPT_TYPE),
+                )
+                return {FIELD_KEY_INTERRUPT: interrupt_data, "content": "", "tool_calls": []}
+
             duration_s = time.monotonic() - start
             bound_log.error(
                 f"{operation_name}_error",

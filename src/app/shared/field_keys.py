@@ -16,3 +16,7 @@ CHROMA_RESULT_IDS = "ids"
 
 # Embedding model
 EMBEDDING_MODEL_DEFAULT = "text-embedding-3-small"
+
+# Interrupt fields
+FIELD_KEY_INTERRUPT = "interrupt"
+FIELD_KEY_INTERRUPT_TYPE = "type"

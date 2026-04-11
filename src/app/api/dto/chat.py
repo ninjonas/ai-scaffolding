@@ -20,6 +20,7 @@ class ChatResponseDTO(CamelModel):
     message: str
     conversation_id: str
     tool_calls: list[ToolCallDTO] = Field(default_factory=list)
+    interrupt: dict | None = None
 
 
 class ResumeRequestDTO(CamelModel):

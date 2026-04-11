@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from app.api.dto.chat import ChatRequestDTO, ChatResponseDTO, ResumeRequestDTO
 from app.infrastructure.mappers.chat import ChatMapper
 from app.service.chat import ChatService
+from app.shared.field_keys import FIELD_KEY_INTERRUPT, FIELD_KEY_INTERRUPT_TYPE
 
 log = structlog.get_logger()
 
@@ -37,7 +38,7 @@ async def send_message(
         has_images=bool(request.images),
     )
 
-    response_message = await chat_service.send_message(
+    result = await chat_service.send_message(
         content=request.message,
         conversation_id=request.conversation_id,
         images=request.images,
@@ -45,9 +46,23 @@ async def send_message(
         knowledge_file_ids=request.knowledge_file_ids,
     )
 
+    if isinstance(result, dict) and result.get(FIELD_KEY_INTERRUPT):
+        interrupt_data = result[FIELD_KEY_INTERRUPT]
+        dto = ChatResponseDTO(
+            message="",
+            conversation_id=request.conversation_id or "",
+            interrupt=interrupt_data,
+        )
+        log.info(
+            "chat_interrupt_sent",
+            conversation_id=request.conversation_id,
+            interrupt_type=interrupt_data.get(FIELD_KEY_INTERRUPT_TYPE),
+        )
+        return dto
+
     dto = ChatMapper.to_response_dto(
-        response_message,
-        conversation_id=response_message.conversation_id,
+        result,
+        conversation_id=result.conversation_id,
     )
     log.info("chat_response_sent", conversation_id=dto.conversation_id)
     return dto
@@ -69,8 +84,17 @@ async def resume_conversation(
 
     result = await chat_service.resume(conversation_id, request.approved)
 
-    content = result.get("content", "")
-    tool_calls = result.get("tool_calls", [])
-    dto = ChatResponseDTO(message=content, conversation_id=conversation_id, tool_calls=tool_calls)
+    if result.get(FIELD_KEY_INTERRUPT):
+        dto = ChatResponseDTO(
+            message="",
+            conversation_id=conversation_id,
+            interrupt=result[FIELD_KEY_INTERRUPT],
+        )
+    else:
+        content = result.get("content", "")
+        tool_calls = result.get("tool_calls", [])
+        dto = ChatResponseDTO(
+            message=content, conversation_id=conversation_id, tool_calls=tool_calls
+        )
     log.info("chat_resume_response_sent", conversation_id=conversation_id)
     return dto

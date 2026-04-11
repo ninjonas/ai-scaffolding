@@ -1404,3 +1404,127 @@
     }
   }
 }
+
+/* Memory confirm card */
+.memory-confirm-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 8px 0;
+  max-width: 480px;
+}
+
+.memory-confirm-heading {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-h);
+  margin-bottom: 12px;
+}
+
+.memory-confirm-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.memory-result {
+  background: var(--muted);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.memory-result-date {
+  font-size: 11px;
+  color: var(--accent);
+  margin-bottom: 3px;
+  font-family: var(--mono);
+}
+
+.memory-result-excerpt {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.memory-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.memory-confirm-btn {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  border: none;
+}
+
+.memory-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.memory-confirm-btn--primary {
+  background: var(--accent);
+  color: #1a1a2e;
+}
+
+.memory-confirm-btn--primary:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.memory-confirm-btn--ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.memory-confirm-btn--ghost:hover:not(:disabled) {
+  color: var(--text-h);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Searching memory indicator */
+.searching-memory {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.searching-memory-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: memoryPulse 1.2s ease-in-out infinite;
+}
+
+.searching-memory-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.searching-memory-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.searching-memory-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+@keyframes memoryPulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+  }
+  40% {
+    opacity: 1;
+  }
+}

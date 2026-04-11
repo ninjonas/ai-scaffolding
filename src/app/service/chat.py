@@ -11,6 +11,7 @@ from app.domain.entities.message import Message, MessageRole
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from app.infrastructure.vector.message_indexer import MessageIndexer
 from app.service.knowledge import KnowledgeService
+from app.shared.field_keys import FIELD_KEY_INTERRUPT, FIELD_KEY_INTERRUPT_TYPE
 
 log = structlog.get_logger()
 
@@ -35,7 +36,7 @@ class ChatService:
         images: list[str] | None = None,
         image_filenames: list[str] | None = None,
         knowledge_file_ids: list[str] | None = None,
-    ) -> Message:
+    ) -> Message | dict:
         log.info(
             "send_message_start",
             conversation_id=conversation_id,
@@ -64,6 +65,16 @@ class ChatService:
                 message_count=len(conversation.messages),
             )
 
+            if response.get(FIELD_KEY_INTERRUPT):
+                log.info(
+                    "send_message_interrupted",
+                    conversation_id=conversation.id,
+                    interrupt_type=response[FIELD_KEY_INTERRUPT].get(FIELD_KEY_INTERRUPT_TYPE),
+                )
+                await uow.conversations.save(conversation)
+                await uow.commit()
+                return response
+
             raw_content = response["content"]
             if not raw_content:
                 log.warning("chat_empty_response", conversation_id=conversation.id)
@@ -80,12 +91,18 @@ class ChatService:
 
         if self._message_indexer:
             await self._message_indexer.index(
-                user_message.id, content, MessageRole.USER,
-                conversation.id, user_message.created_at,
+                user_message.id,
+                content,
+                MessageRole.USER,
+                conversation.id,
+                user_message.created_at,
             )
             await self._message_indexer.index(
-                assistant_message.id, raw_content, MessageRole.ASSISTANT,
-                conversation.id, assistant_message.created_at,
+                assistant_message.id,
+                raw_content,
+                MessageRole.ASSISTANT,
+                conversation.id,
+                assistant_message.created_at,
             )
 
         uploaded_files = []
