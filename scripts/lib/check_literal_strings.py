@@ -48,6 +48,10 @@ EXEMPT_LITERALS = {
     "llm",
     "tool_calls",
     "/{file_id}",  # FastAPI route path parameter — decorator argument, intentionally repeated
+    "---",  # YAML/markdown front matter delimiter
+    ", ",  # generic separator — not a domain constant
+    "- **",  # markdown bullet syntax
+    "[]",  # SQLAlchemy column default for list fields
 }
 
 # Strings to always ignore
@@ -355,11 +359,16 @@ def main() -> int:
             print(f"    ... and {len(test_violations) - 20} more")
         exit_code = 1
 
+    WARN_THRESHOLD = 15
+
     total_errors = len(app_errors) + len(test_violations)
     total_warnings = len(app_warnings)
 
     if total_errors > 0:
         print(f"\n{RED}{total_errors} error(s) and {total_warnings} warning(s) found.{NC}")
+    elif total_warnings >= WARN_THRESHOLD:
+        print(f"\n{RED}{total_warnings} warning(s) found — threshold of {WARN_THRESHOLD} exceeded.{NC}")
+        exit_code = 1
     elif total_warnings > 0:
         print(f"\n{YELLOW}{total_warnings} warning(s) found (no errors).{NC}")
     else:

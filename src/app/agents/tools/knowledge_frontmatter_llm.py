@@ -9,6 +9,8 @@ from app.shared.field_keys import CONTENT_TYPE_IMAGE_URL, CONTENT_TYPE_TEXT
 
 log = structlog.get_logger(__name__)
 
+LLM_STRUCTURED_OUTPUT_METHOD = "json_mode"
+
 LLM_FRONTMATTER_PROMPT = (
     "You are a file metadata assistant. Given the content and type of a file, "
     "produce structured metadata.\n\n"
@@ -53,7 +55,9 @@ async def llm_describe_image(
     """
     log.info("knowledge_llm_image_describe_start", file_type=file_type)
     try:
-        structured_llm = llm.with_structured_output(KnowledgeFrontmatterSchema, method="json_mode")
+        structured_llm = llm.with_structured_output(
+            KnowledgeFrontmatterSchema, method=LLM_STRUCTURED_OUTPUT_METHOD
+        )
         prompt = IMAGE_DESCRIBE_PROMPT.format(file_type=file_type)
         message = HumanMessage(
             content=[
@@ -89,7 +93,9 @@ async def llm_generate(
     """
     log.info("knowledge_llm_frontmatter_start", file_type=file_type)
     try:
-        structured_llm = llm.with_structured_output(KnowledgeFrontmatterSchema, method="json_mode")
+        structured_llm = llm.with_structured_output(
+            KnowledgeFrontmatterSchema, method=LLM_STRUCTURED_OUTPUT_METHOD
+        )
         preview = content[:CONTENT_PREVIEW_CHARS]
         prompt = LLM_FRONTMATTER_PROMPT.format(file_type=file_type, content=preview)
         result: KnowledgeFrontmatterSchema = await structured_llm.ainvoke(prompt)

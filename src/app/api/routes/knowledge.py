@@ -10,7 +10,7 @@ from app.api.dto.knowledge import (
     KnowledgeListQueryDTO,
 )
 from app.api.mappers.knowledge_file import KnowledgeFileApiMapper
-from app.service.knowledge import KnowledgeService
+from app.service.knowledge import ERR_FILE_NOT_FOUND, KnowledgeService
 
 log = structlog.get_logger()
 
@@ -81,7 +81,7 @@ async def get_file(
     if entity is None:
         from fastapi import HTTPException
 
-        raise HTTPException(status_code=404, detail=f"Knowledge file not found: {file_id}")
+        raise HTTPException(status_code=404, detail=f"{ERR_FILE_NOT_FOUND}{file_id}")
     dto = KnowledgeFileApiMapper.to_response_dto(entity)
     log.info("knowledge_get_response", file_id=file_id)
     return dto

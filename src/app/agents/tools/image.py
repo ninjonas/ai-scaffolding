@@ -23,6 +23,23 @@ class OptimizedImageResult:
     optimized_bytes: int
 
 
+def _resize_and_encode(img: Image.Image) -> tuple[Image.Image, str, io.BytesIO]:
+    """Resize to MAX_DIMENSION if needed, convert to output format, encode to buffer."""
+    if max(img.size) > MAX_DIMENSION:
+        img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
+    if img.mode == "RGBA":
+        output_format = "PNG"
+    else:
+        img = img.convert("RGB")
+        output_format = JPEG_FORMAT
+    buffer = io.BytesIO()
+    save_kwargs: dict = {"format": output_format, "optimize": True}
+    if output_format == JPEG_FORMAT:
+        save_kwargs["quality"] = JPEG_QUALITY
+    img.save(buffer, **save_kwargs)
+    return img, output_format, buffer
+
+
 def optimize_image(image_bytes: bytes) -> OptimizedImageResult:
     original_bytes = len(image_bytes)
     img = Image.open(io.BytesIO(image_bytes))
@@ -36,20 +53,7 @@ def optimize_image(image_bytes: bytes) -> OptimizedImageResult:
     )
 
     _resize_start = time.monotonic()
-    if max(img.size) > MAX_DIMENSION:
-        img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
-
-    if img.mode == "RGBA":
-        output_format = "PNG"
-    else:
-        img = img.convert("RGB")
-        output_format = JPEG_FORMAT
-
-    buffer = io.BytesIO()
-    save_kwargs: dict = {"format": output_format, "optimize": True}
-    if output_format == JPEG_FORMAT:
-        save_kwargs["quality"] = JPEG_QUALITY
-    img.save(buffer, **save_kwargs)
+    img, output_format, buffer = _resize_and_encode(img)
     _resize_duration_ms = round((time.monotonic() - _resize_start) * 1000, 2)
 
     optimized_bytes = buffer.tell()

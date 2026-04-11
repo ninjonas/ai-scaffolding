@@ -567,8 +567,13 @@ def main() -> int:
                 if len(violations) > 10:
                     print(f"    ... and {len(violations) - 10} more")
 
+        WARN_THRESHOLD = 15
+
         if failures:
             print(f"\n{RED}{len(failures)} mapper pattern violation(s) found (FAIL).{NC}")
+            return 1
+        elif len(warnings) >= WARN_THRESHOLD:
+            print(f"\n{RED}{len(warnings)} warning(s) found — threshold of {WARN_THRESHOLD} exceeded.{NC}")
             return 1
         else:
             print(f"\n{YELLOW}{len(warnings)} warning(s) found (PASS).{NC}")

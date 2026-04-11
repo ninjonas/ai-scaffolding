@@ -19,6 +19,7 @@ from app.agents.skills.calculator.tools import calculate
 from app.agents.skills.file_ops.tools import list_directory, read_file
 from app.agents.skills.loader import build_skill_catalog, load_skill, read_skill_file
 from app.agents.skills.web_search.tools import search_web
+from app.agents.tools.image import BASE64_JPEG_PREFIX
 from app.shared.field_keys import CONTENT_TYPE_IMAGE_URL, CONTENT_TYPE_TEXT
 
 log = structlog.get_logger()
@@ -78,7 +79,7 @@ async def invoke_llm(state: ChatbotState, llm, extra_tools: list | None = None) 
                 content_parts.append(
                     {
                         "type": CONTENT_TYPE_IMAGE_URL,
-                        "image_url": {"url": f"data:image/jpeg;base64,{img}"},
+                        "image_url": {"url": f"{BASE64_JPEG_PREFIX}{img}"},
                     }
                 )
             chat_messages[last_human] = HumanMessage(content=content_parts)

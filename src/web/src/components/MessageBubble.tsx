@@ -27,6 +27,43 @@ function ToolCallsSection({ toolCalls }: { toolCalls: ToolCall[] }) {
   );
 }
 
+function UserMessageContent({
+  images,
+  knowledgeFiles,
+  content,
+}: {
+  images?: string[];
+  knowledgeFiles?: KnowledgeChip[];
+  content: string;
+}) {
+  return (
+    <>
+      {images && images.length > 0 && (
+        <div className="message-images">
+          {images.map((img, i) => (
+            <img
+              key={i}
+              src={`data:image/jpeg;base64,${img}`}
+              alt={`Upload ${i + 1}`}
+              className="message-image"
+            />
+          ))}
+        </div>
+      )}
+      {knowledgeFiles && knowledgeFiles.length > 0 && (
+        <div className="message-knowledge-chips">
+          {knowledgeFiles.map((kf) => (
+            <span key={kf.id} className="knowledge-chip knowledge-chip--static">
+              {kf.name}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="message-content">{content}</div>
+    </>
+  );
+}
+
 export function MessageBubble({
   role,
   content,
@@ -45,30 +82,7 @@ export function MessageBubble({
           <span />
         </div>
       ) : (
-        <>
-          {images && images.length > 0 && (
-            <div className="message-images">
-              {images.map((img, i) => (
-                <img
-                  key={i}
-                  src={`data:image/jpeg;base64,${img}`}
-                  alt={`Upload ${i + 1}`}
-                  className="message-image"
-                />
-              ))}
-            </div>
-          )}
-          {knowledgeFiles && knowledgeFiles.length > 0 && (
-            <div className="message-knowledge-chips">
-              {knowledgeFiles.map((kf) => (
-                <span key={kf.id} className="knowledge-chip knowledge-chip--static">
-                  {kf.name}
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="message-content">{content}</div>
-        </>
+        <UserMessageContent images={images} knowledgeFiles={knowledgeFiles} content={content} />
       )}
       {!loading && toolCalls && toolCalls.length > 0 && <ToolCallsSection toolCalls={toolCalls} />}
     </div>
