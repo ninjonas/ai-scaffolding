@@ -6,6 +6,8 @@ from pathlib import Path
 
 import yaml
 
+from app.shared.field_keys import FIELD_KEY_NAME
+
 SUPPORTED_EXTENSIONS = {"md", "txt", "json", "yml"}
 KEYS_PREFIX = "Keys: "
 TOP_KEYS_SEPARATOR = ", "
@@ -58,7 +60,7 @@ def _extract_from_mapping(filename: str, data_obj: object) -> tuple[str, str, li
     description = ""
     if isinstance(data_obj, dict):
         # "name" is a data key (JSON/YAML field), not a repeated app string constant
-        candidate = data_obj.get("name")
+        candidate = data_obj.get(FIELD_KEY_NAME)
         if isinstance(candidate, str):
             name = candidate
         top_keys = list(data_obj.keys())[:8]

@@ -84,8 +84,8 @@ src/web/src/
 - [ ] Create `build_knowledge_catalog(catalog: list[dict]) -> str` utility for prompt injection.
 - [ ] Update `ChatbotState` to add `knowledge_catalog: str` field.
 - [ ] Update `invoke_llm` in chatbot nodes: append knowledge catalog to system prompt, register `read_knowledge_file` in `ALL_TOOLS`.
-- [ ] Update `AgentBroker.chat_response()` to accept and forward `knowledge_catalog`.
-- [ ] Update `ChatService.send_message()` to fetch catalog (project + conversation level) and pass through broker.
+- [x] Update `AgentBroker.chat_response()` to accept and forward `knowledge_catalog`.
+- [x] Update `ChatService.send_message()` to fetch catalog (project + conversation level) and pass through broker.
 
 ### Phase 4: REST API `Not Started`
 
@@ -288,3 +288,4 @@ No new dependencies. Uses existing React, fetch API.
 | 2026-04-10 | Jonas + Claude | Initial draft                                                                                           |
 | 2026-04-10 | Claude         | Migrated to new plan format: added phase statuses, task checkboxes, agent execution strategy, changelog |
 | 2026-04-10 | Claude (api)   | Phase 2 complete: KnowledgeService + knowledge_frontmatter module implemented, all checks pass          |
+| 2026-04-10 | Claude (api)   | Phase 3 partial: AgentBroker.chat_response and ChatService.send_message updated with knowledge catalog  |

@@ -12,6 +12,7 @@ from app.api.router import api_router
 from app.infrastructure.database import create_engine, create_session_factory, init_database
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from app.service.chat import ChatService
+from app.service.knowledge import KnowledgeService
 from app.shared.config import Settings
 from app.shared.di import Container
 from app.shared.llm import create_llm
@@ -44,7 +45,10 @@ async def lifespan(app: FastAPI):
     orchestrator = AgentOrchestrator(agent_graph)
     broker = AgentBroker(orchestrator)
     uow = SQLAlchemyUnitOfWork(session_factory)
-    chat_service = ChatService(broker=broker, unit_of_work=uow)
+    knowledge_service = KnowledgeService(session_factory=session_factory)
+    chat_service = ChatService(
+        broker=broker, unit_of_work=uow, knowledge_service=knowledge_service
+    )
 
     _container = Container(settings=settings)
     _container._register("chat_service", chat_service)

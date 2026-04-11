@@ -3,17 +3,27 @@ import time
 import structlog
 
 from app.agents.orchestrator import AgentBroker
+from app.agents.tools.knowledge import build_knowledge_catalog
 from app.domain.entities.conversation import Conversation
 from app.domain.entities.message import Message, MessageRole
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
+from app.service.knowledge import SCOPE_CONVERSATION, KnowledgeService
 
 log = structlog.get_logger()
 
+SCOPE_PROJECT = "project"
+
 
 class ChatService:
-    def __init__(self, broker: AgentBroker, unit_of_work: SQLAlchemyUnitOfWork) -> None:
+    def __init__(
+        self,
+        broker: AgentBroker,
+        unit_of_work: SQLAlchemyUnitOfWork,
+        knowledge_service: KnowledgeService,
+    ) -> None:
         self._broker = broker
         self._uow = unit_of_work
+        self._knowledge_service = knowledge_service
 
     async def send_message(
         self,
@@ -32,6 +42,20 @@ class ChatService:
         async with self._uow as uow:
             conversation = await self._get_or_create(uow, conversation_id)
 
+            project_catalog = await self._knowledge_service.get_catalog(scope=SCOPE_PROJECT)
+            conversation_catalog = await self._knowledge_service.get_catalog(
+                scope=SCOPE_CONVERSATION,
+                conversation_id=conversation.id,
+            )
+            catalog_entries = project_catalog + conversation_catalog
+            knowledge_catalog = build_knowledge_catalog(catalog_entries)
+            log.debug(
+                "knowledge_catalog_built",
+                conversation_id=conversation.id,
+                project_count=len(project_catalog),
+                conversation_count=len(conversation_catalog),
+            )
+
             user_message = Message(
                 content=content,
                 role=MessageRole.USER,
@@ -42,6 +66,7 @@ class ChatService:
             response = await self._broker.chat_response(
                 content,
                 images or [],
+                knowledge_catalog=knowledge_catalog,
                 conversation_id=conversation.id,
                 message_count=len(conversation.messages),
             )

@@ -1,9 +1,12 @@
+from collections.abc import Callable
 from datetime import datetime
 
 import structlog
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.knowledge_file import KnowledgeFile
 from app.domain.repositories.knowledge_file import KnowledgeFileRepository
+from app.infrastructure.repositories.knowledge_file import SQLKnowledgeFileRepository
 from app.service.knowledge_frontmatter import detect_file_type, generate
 
 log = structlog.get_logger()
@@ -16,8 +19,12 @@ ERR_FILE_NOT_FOUND = "Knowledge file not found: "
 
 
 class KnowledgeService:
-    def __init__(self, repository: KnowledgeFileRepository) -> None:
-        self._repository = repository
+    def __init__(self, session_factory: Callable[[], AsyncSession]) -> None:
+        self._session_factory = session_factory
+
+    def _repo(self) -> KnowledgeFileRepository:
+        """Create a repository backed by a new session."""
+        return SQLKnowledgeFileRepository(self._session_factory())
 
     async def upload(
         self,
@@ -38,7 +45,7 @@ class KnowledgeService:
 
         file_type = detect_file_type(filename)
 
-        existing = await self._repository.list(scope=scope, conversation_id=conversation_id)
+        existing = await self._repo().list(scope=scope, conversation_id=conversation_id)
         limit = MAX_CONVERSATION_FILES if scope == SCOPE_CONVERSATION else MAX_PROJECT_FILES
         if len(existing) >= limit:
             raise ValueError(f"File limit reached: max {limit} files for scope '{scope}'")
@@ -54,7 +61,7 @@ class KnowledgeService:
             conversation_id=conversation_id,
         )
 
-        await self._repository.save(knowledge_file)
+        await self._repo().save(knowledge_file)
         log.info(
             "knowledge_upload_complete",
             file_id=knowledge_file.id,
@@ -75,7 +82,7 @@ class KnowledgeService:
     ) -> KnowledgeFile:
         log.info("knowledge_update_start", file_id=file_id)
 
-        existing = await self._repository.get_by_id(file_id)
+        existing = await self._repo().get_by_id(file_id)
         if existing is None:
             raise ValueError(ERR_FILE_NOT_FOUND + file_id)
 
@@ -92,16 +99,16 @@ class KnowledgeService:
             updated_at=datetime.utcnow(),
         )
 
-        await self._repository.save(updated)
+        await self._repo().save(updated)
         log.info("knowledge_update_complete", file_id=file_id, name=updated.name)
         return updated
 
     async def delete(self, file_id: str) -> None:
         log.info("knowledge_delete_start", file_id=file_id)
-        existing = await self._repository.get_by_id(file_id)
+        existing = await self._repo().get_by_id(file_id)
         if existing is None:
             raise ValueError(ERR_FILE_NOT_FOUND + file_id)
-        await self._repository.delete(file_id)
+        await self._repo().delete(file_id)
         log.info("knowledge_delete_complete", file_id=file_id)
 
     async def list(
@@ -110,7 +117,7 @@ class KnowledgeService:
         conversation_id: str | None = None,
     ) -> list[KnowledgeFile]:
         log.debug("knowledge_list", scope=scope, conversation_id=conversation_id)
-        return await self._repository.list(scope=scope, conversation_id=conversation_id)
+        return await self._repo().list(scope=scope, conversation_id=conversation_id)
 
     async def get_catalog(
         self,
@@ -118,7 +125,7 @@ class KnowledgeService:
         conversation_id: str | None = None,
     ) -> list[dict]:
         log.debug("knowledge_get_catalog", scope=scope, conversation_id=conversation_id)
-        files = await self._repository.list(scope=scope, conversation_id=conversation_id)
+        files = await self._repo().list(scope=scope, conversation_id=conversation_id)
         return [
             {
                 "id": f.id,

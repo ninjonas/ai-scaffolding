@@ -4,6 +4,8 @@ from typing import Any
 import structlog
 from langchain_core.tools import tool
 
+from app.shared.field_keys import FIELD_KEY_DESCRIPTION, FIELD_KEY_NAME
+
 log = structlog.get_logger()
 
 SKILLS_DIR = Path(__file__).parent
@@ -18,8 +20,8 @@ def build_skill_catalog() -> list[dict[str, Any]]:
             frontmatter, description = _parse_skill_md(skill_md)
             catalog.append(
                 {
-                    "name": skill_dir.name,
-                    "description": description,
+                    FIELD_KEY_NAME: skill_dir.name,
+                    FIELD_KEY_DESCRIPTION: description,
                     **frontmatter,
                 }
             )

@@ -29,6 +29,7 @@ class AgentBroker:
         self,
         content: str,
         images: list[str] | None = None,
+        knowledge_catalog: str = "",
         **context: Any,
     ) -> dict:
         """Invoke chat agent with domain-level parameters.
@@ -36,6 +37,7 @@ class AgentBroker:
         Args:
             content: User message text.
             images: Optional list of base64-encoded images.
+            knowledge_catalog: Pre-formatted knowledge catalog string for prompt injection.
             **context: Additional context forwarded as structured log fields.
 
         Returns:
@@ -44,6 +46,7 @@ class AgentBroker:
         state_dict = {
             "messages": [{"role": "user", "content": content}],
             "images": images or [],
+            "knowledge_catalog": knowledge_catalog,
         }
         return await self._orchestrator.invoke_with_telemetry(
             "chat_response",

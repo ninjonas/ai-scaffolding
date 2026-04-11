@@ -48,12 +48,17 @@ def _build_system_prompt() -> str:
     return "\n\n".join([system, persona, *rules, skills_section, output_fmt])
 
 
-async def invoke_llm(state: ChatbotState, llm) -> dict:
+async def invoke_llm(state: ChatbotState, llm, extra_tools: list | None = None) -> dict:
     log.info("chatbot_invoke_llm", message_count=len(state["messages"]))
 
     system_prompt = _build_system_prompt()
     if state.get("skill_context"):
         system_prompt += f"\n\n## Loaded Skill Context\n\n{state['skill_context']}"
+
+    knowledge_catalog = state.get("knowledge_catalog") or ""
+    if knowledge_catalog:
+        system_prompt += f"\n\n{knowledge_catalog}"
+        log.debug("chatbot_knowledge_catalog_injected", length=len(knowledge_catalog))
 
     chat_messages = list(state["messages"])
     images = state.get("images") or []
@@ -79,8 +84,9 @@ async def invoke_llm(state: ChatbotState, llm) -> dict:
                 )
             chat_messages[last_human] = HumanMessage(content=content_parts)
 
+    tools = ALL_TOOLS + (extra_tools or [])
     messages = [SystemMessage(content=system_prompt), *chat_messages]
-    llm_with_tools = llm.bind_tools(ALL_TOOLS)
+    llm_with_tools = llm.bind_tools(tools)
     start = time.monotonic()
     response = await llm_with_tools.ainvoke(messages)
 
