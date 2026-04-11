@@ -1,8 +1,10 @@
+import asyncio
 import time
 
 import structlog
 
 from app.agents.orchestrator import AgentBroker
+from app.agents.tools.image import optimize_images_b64
 from app.agents.tools.knowledge import build_knowledge_catalog
 from app.domain.entities.conversation import Conversation
 from app.domain.entities.knowledge_file import SCOPE_CONVERSATION, SCOPE_PROJECT
@@ -29,6 +31,7 @@ class ChatService:
         content: str,
         conversation_id: str | None = None,
         images: list[str] | None = None,
+        image_filenames: list[str] | None = None,
     ) -> Message:
         log.info(
             "send_message_start",
@@ -37,6 +40,8 @@ class ChatService:
             content_length=len(content),
         )
         start = time.monotonic()  # timing: operation-level
+
+        optimized = optimize_images_b64(images) if images else []
 
         async with self._uow as uow:
             conversation = await self._get_or_create(uow, conversation_id)
@@ -59,13 +64,13 @@ class ChatService:
             user_message = Message(
                 content=content,
                 role=MessageRole.USER,
-                images=images or [],
+                images=optimized,
             )
             conversation.add_message(user_message)
 
             response = await self._broker.chat_response(
                 content,
-                images or [],
+                optimized,
                 knowledge_catalog=knowledge_catalog,
                 conversation_id=conversation.id,
                 message_count=len(conversation.messages),
@@ -84,6 +89,23 @@ class ChatService:
 
             await uow.conversations.save(conversation)
             await uow.commit()
+
+        uploaded_files = []
+        filenames = image_filenames or []
+        for i, img_b64 in enumerate(user_message.images):
+            filename = filenames[i] if i < len(filenames) else f"image_{i + 1}.jpg"
+            kf = await self._knowledge_service.upload(
+                filename=filename,
+                content=img_b64,
+                scope=SCOPE_CONVERSATION,
+                conversation_id=conversation.id,
+            )
+            uploaded_files.append(kf)
+
+        _enrich_tasks = [
+            asyncio.create_task(self._knowledge_service.enrich_metadata(kf.id))
+            for kf in uploaded_files
+        ]
 
         duration = time.monotonic() - start  # timing: operation-level
         log.info(

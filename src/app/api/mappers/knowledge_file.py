@@ -8,6 +8,7 @@ class KnowledgeFileApiMapper:
         return KnowledgeFileResponseDTO(
             id=entity.id,
             name=entity.name,
+            filename=entity.filename,
             description=entity.description,
             content=entity.content,
             tags=entity.tags,

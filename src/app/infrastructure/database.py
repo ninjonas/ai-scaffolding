@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import (
 log = structlog.get_logger()
 
 DATA_DIR = Path("data")
+TABLE_KNOWLEDGE_FILES = "knowledge_files"
 
 
 def create_engine(database_url: str) -> AsyncEngine:
@@ -25,14 +26,17 @@ def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSessi
 
 
 async def _migrate_knowledge_files(conn) -> None:  # type: ignore[no-untyped-def]
-    """Add enriched column to knowledge_files if it does not already exist."""
-    result = await conn.execute(text("PRAGMA table_info(knowledge_files)"))
+    """Add missing columns to knowledge_files if they do not already exist."""
+    result = await conn.execute(text(f"PRAGMA table_info({TABLE_KNOWLEDGE_FILES})"))
     columns = {row[1] for row in result.fetchall()}
     if "enriched" not in columns:
-        await conn.execute(
-            text("ALTER TABLE knowledge_files ADD COLUMN enriched BOOLEAN NOT NULL DEFAULT 0")
-        )
-        log.info("migration_applied", table="knowledge_files", column="enriched")
+        sql = f"ALTER TABLE {TABLE_KNOWLEDGE_FILES} ADD COLUMN enriched BOOLEAN NOT NULL DEFAULT 0"
+        await conn.execute(text(sql))
+        log.info("migration_applied", table=TABLE_KNOWLEDGE_FILES, column="enriched")
+    if "filename" not in columns:
+        sql = f"ALTER TABLE {TABLE_KNOWLEDGE_FILES} ADD COLUMN filename TEXT NOT NULL DEFAULT ''"
+        await conn.execute(text(sql))
+        log.info("migration_applied", table=TABLE_KNOWLEDGE_FILES, column="filename")
 
 
 async def init_database(engine: AsyncEngine) -> None:

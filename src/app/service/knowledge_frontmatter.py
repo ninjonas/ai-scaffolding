@@ -7,7 +7,7 @@ from pathlib import Path
 import structlog
 import yaml
 
-from app.shared.field_keys import FIELD_KEY_NAME
+from app.shared.field_keys import CONTENT_TYPE_TEXT, FIELD_KEY_NAME
 
 log = structlog.get_logger(__name__)
 
@@ -21,7 +21,9 @@ TOP_KEYS_SEPARATOR = ", "
 def detect_file_type(filename: str) -> str:
     ext = Path(filename).suffix.lstrip(".").lower()
     if ext not in SUPPORTED_EXTENSIONS:
-        raise ValueError(f"Unsupported file type: .{ext}. Accepted: .md, .txt, .json, .yml, or image files")  # noqa: E501
+        raise ValueError(
+            f"Unsupported file type: .{ext}. Accepted: .md, .txt, .json, .yml, or image files"
+        )
     return ext
 
 
@@ -55,7 +57,7 @@ def _from_txt(filename: str, content: str) -> tuple[str, str, list[str]]:
         if stripped:
             description = stripped[:200]
             break
-    return name, description, ["text"]
+    return name, description, [CONTENT_TYPE_TEXT]
 
 
 def _extract_from_mapping(filename: str, data_obj: object) -> tuple[str, str, list[str]]:

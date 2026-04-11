@@ -47,6 +47,7 @@ export function TagsEditor({
 
 export interface EditorFormProps {
   nameRef: React.RefObject<HTMLInputElement | null>;
+  filename: string;
   name: string;
   description: string;
   tags: string[];
@@ -70,12 +71,11 @@ function EditorTextFields({
   nameRef,
   name,
   description,
-  content,
   onNameChange,
   onDescriptionChange,
 }: Pick<
   EditorFormProps,
-  'nameRef' | 'name' | 'description' | 'content' | 'onNameChange' | 'onDescriptionChange'
+  'nameRef' | 'name' | 'description' | 'onNameChange' | 'onDescriptionChange'
 >) {
   return (
     <>
@@ -92,30 +92,56 @@ function EditorTextFields({
       </label>
       <label className="knowledge-field-label">
         Description
-        <input
-          type="text"
-          className="knowledge-input"
+        <textarea
+          className="knowledge-input knowledge-description-textarea"
           value={description}
           onChange={(e) => onDescriptionChange(e.target.value)}
           placeholder="Brief description of this file"
+          rows={3}
         />
       </label>
-      <div className="knowledge-field-label">
-        Content
-        <pre
-          className={`knowledge-content-preview${isMonoFileType(name) ? ' knowledge-textarea-mono' : ''}`}
-        >
-          {content || (
-            <span className="knowledge-content-empty">{getContentPlaceholder(name)}</span>
-          )}
-        </pre>
-      </div>
     </>
+  );
+}
+
+function FileDetailsCollapsible({
+  filename,
+  name,
+  content,
+}: Pick<EditorFormProps, 'filename' | 'name' | 'content'>) {
+  return (
+    <details className="knowledge-collapsible">
+      <summary className="knowledge-collapsible-summary">File details</summary>
+      <div className="knowledge-collapsible-body">
+        <label className="knowledge-field-label">
+          Filename
+          <input
+            type="text"
+            className="knowledge-input knowledge-input-readonly"
+            value={filename}
+            readOnly
+            tabIndex={-1}
+            placeholder="—"
+          />
+        </label>
+        <div className="knowledge-field-label">
+          Content
+          <pre
+            className={`knowledge-content-preview${isMonoFileType(name) ? ' knowledge-textarea-mono' : ''}`}
+          >
+            {content || (
+              <span className="knowledge-content-empty">{getContentPlaceholder(name)}</span>
+            )}
+          </pre>
+        </div>
+      </div>
+    </details>
   );
 }
 
 export function EditorForm({
   nameRef,
+  filename,
   name,
   description,
   tags,
@@ -140,7 +166,6 @@ export function EditorForm({
         nameRef={nameRef}
         name={name}
         description={description}
-        content={content}
         onNameChange={onNameChange}
         onDescriptionChange={onDescriptionChange}
       />
@@ -151,6 +176,7 @@ export function EditorForm({
         onAddTag={onAddTag}
         onRemoveTag={onRemoveTag}
       />
+      <FileDetailsCollapsible filename={filename} name={name} content={content} />
       {error && <div className="knowledge-error">{error}</div>}
       <button className="knowledge-submit-btn" onClick={onSubmit} disabled={saving}>
         {saving ? 'Saving...' : 'Save'}

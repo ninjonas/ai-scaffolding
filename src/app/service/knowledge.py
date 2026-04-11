@@ -4,7 +4,7 @@ from datetime import datetime
 import structlog
 from langchain_core.language_models import BaseChatModel
 
-from app.agents.tools.knowledge_frontmatter_llm import llm_generate
+from app.agents.tools.knowledge_frontmatter_llm import llm_describe_image, llm_generate
 from app.domain.entities.knowledge_file import (
     SCOPE_CONVERSATION,
     KnowledgeFile,
@@ -58,6 +58,7 @@ class KnowledgeService:
             name, description, tags = generate(filename, content, file_type)
             knowledge_file = KnowledgeFile(
                 name=name,
+                filename=filename,
                 description=description,
                 content=content,
                 file_type=file_type,
@@ -97,6 +98,7 @@ class KnowledgeService:
             updated = KnowledgeFile(
                 id=existing.id,
                 name=name if name is not None else existing.name,
+                filename=existing.filename,
                 description=description if description is not None else existing.description,
                 content=content if content is not None else existing.content,
                 file_type=existing.file_type,
@@ -156,15 +158,19 @@ class KnowledgeService:
                     log.warning("knowledge_enrich_skip", file_id=file_id, reason="not_found")
                     return
 
-            if self._llm is not None and not is_image(file.file_type):
+            if self._llm is not None and is_image(file.file_type):
+                name, description, tags = await llm_describe_image(
+                    file.content, file.file_type, self._llm
+                )
+            elif self._llm is not None:
                 name, description, tags = await llm_generate(
                     file.content, file.file_type, self._llm
                 )
             else:
                 name, description, tags = "", "", []
 
-            if name:
-                await self.update(file_id, name=name, description=description, tags=tags)
+            if description or tags:
+                await self.update(file_id, description=description, tags=tags)
 
             async with self._uow_factory() as uow:
                 existing = await uow.knowledge.get_by_id(file_id)
@@ -172,6 +178,7 @@ class KnowledgeService:
                     enriched_file = KnowledgeFile(
                         id=existing.id,
                         name=existing.name,
+                        filename=existing.filename,
                         description=existing.description,
                         content=existing.content,
                         file_type=existing.file_type,

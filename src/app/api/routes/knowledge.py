@@ -7,6 +7,7 @@ from app.api.dto.knowledge import (
     KnowledgeFileResponseDTO,
     KnowledgeFileUpdateDTO,
     KnowledgeFileUploadDTO,
+    KnowledgeListQueryDTO,
 )
 from app.api.mappers.knowledge_file import KnowledgeFileApiMapper
 from app.service.knowledge import KnowledgeService
@@ -54,17 +55,19 @@ async def upload_file(
 @router.get("", response_model=list[KnowledgeFileResponseDTO])
 async def list_files(
     knowledge_service: KnowledgeServiceDep,
-    scope: str | None = None,
-    conversation_id: str | None = None,
+    query: Annotated[KnowledgeListQueryDTO, Depends()],
 ) -> list[KnowledgeFileResponseDTO]:
     log.info(
         "knowledge_list_request",
         method="GET",
         path=KNOWLEDGE_ROUTE_PREFIX,
-        scope=scope,
-        conversation_id=conversation_id,
+        scope=query.scope,
+        conversation_id=query.conversation_id,
     )
-    entities = await knowledge_service.list(scope=scope, conversation_id=conversation_id)
+    entities = await knowledge_service.list(
+        scope=query.scope, conversation_id=query.conversation_id
+    )
+    log.info("knowledge_list_response", count=len(entities))
     return [KnowledgeFileApiMapper.to_response_dto(e) for e in entities]
 
 

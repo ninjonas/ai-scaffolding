@@ -12,6 +12,7 @@ export interface KnowledgeCatalogEntry {
 
 export interface KnowledgeFileResponse {
   id: string;
+  filename: string;
   name: string;
   description: string;
   content: string;

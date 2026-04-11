@@ -21,11 +21,36 @@
 }
 
 .chat-header h1 {
+  flex: 1;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.2px;
   color: var(--text-h);
   margin: 0;
+}
+
+.new-chat-btn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.new-chat-btn:hover:not(:disabled) {
+  color: var(--text-h);
+  border-color: var(--text-muted);
+}
+
+.new-chat-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .chat-messages {
@@ -718,16 +743,16 @@
 }
 
 .knowledge-editor-modal {
-  width: 440px;
-  max-height: 80vh;
+  width: 480px;
+  max-height: 85vh;
   overflow-y: auto;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 20px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
 }
 
 .knowledge-editor-header {
@@ -748,7 +773,7 @@
 .knowledge-field-label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   font-size: 12px;
   font-weight: 500;
   color: var(--text);
@@ -756,7 +781,7 @@
 }
 
 .knowledge-input {
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -771,8 +796,65 @@
   box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
 }
 
+.knowledge-description-textarea {
+  resize: vertical;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.knowledge-collapsible {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.knowledge-collapsible-summary {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.knowledge-collapsible-summary::-webkit-details-marker {
+  display: none;
+}
+
+.knowledge-collapsible-summary::before {
+  content: '▶';
+  font-size: 9px;
+  color: var(--text);
+  opacity: 0.5;
+  transition: transform 0.15s ease;
+}
+
+.knowledge-collapsible[open] .knowledge-collapsible-summary::before {
+  transform: rotate(90deg);
+}
+
+.knowledge-collapsible[open] .knowledge-collapsible-summary {
+  margin-bottom: 10px;
+}
+
+.knowledge-collapsible-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.knowledge-input-readonly {
+  opacity: 0.55;
+  cursor: default;
+  font-family: monospace;
+  font-size: 12px;
+}
+
 .knowledge-textarea {
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -789,7 +871,7 @@
 }
 
 .knowledge-content-preview {
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -1140,8 +1222,8 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 20px;
+  gap: 20px;
+  padding: 24px;
   padding-top: 0;
 }
 

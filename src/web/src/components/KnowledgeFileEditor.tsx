@@ -25,6 +25,7 @@ export function KnowledgeFileEditor({
   onClose,
   onDelete,
 }: KnowledgeFileEditorProps) {
+  const [filename, setFilename] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -42,6 +43,7 @@ export function KnowledgeFileEditor({
     setLoading(true);
     getKnowledgeFile(fileId)
       .then((f) => {
+        setFilename(f.filename ?? '');
         setName(f.name);
         setDescription(f.description ?? '');
         setTags(f.tags ?? []);
@@ -137,6 +139,7 @@ export function KnowledgeFileEditor({
           ) : (
             <EditorForm
               nameRef={firstFocusRef}
+              filename={filename}
               name={name}
               description={description}
               tags={tags}

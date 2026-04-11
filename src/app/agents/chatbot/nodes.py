@@ -15,16 +15,15 @@ from app.agents.constants import (
     PROMPTS_DIR,
     RULES_DIR,
 )
-from app.agents.skills.analyze_image.tools import describe_image
 from app.agents.skills.calculator.tools import calculate
 from app.agents.skills.file_ops.tools import list_directory, read_file
 from app.agents.skills.loader import build_skill_catalog, load_skill, read_skill_file
 from app.agents.skills.web_search.tools import search_web
+from app.shared.field_keys import CONTENT_TYPE_IMAGE_URL, CONTENT_TYPE_TEXT
 
 log = structlog.get_logger()
 
 ALL_TOOLS = [
-    describe_image,
     search_web,
     read_file,
     list_directory,
@@ -74,11 +73,11 @@ async def invoke_llm(state: ChatbotState, llm, extra_tools: list | None = None) 
         )
         if last_human is not None:
             text = chat_messages[last_human].content or ""
-            content_parts = [{"type": "text", "text": text}]
+            content_parts = [{"type": CONTENT_TYPE_TEXT, "text": text}]
             for img in images:
                 content_parts.append(
                     {
-                        "type": "image_url",
+                        "type": CONTENT_TYPE_IMAGE_URL,
                         "image_url": {"url": f"data:image/jpeg;base64,{img}"},
                     }
                 )

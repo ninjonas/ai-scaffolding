@@ -6,3 +6,6 @@ FIELD_KEY_ARGS = "args"
 FIELD_KEY_ID = "id"
 FIELD_KEY_FILE_TYPE = "file_type"
 FIELD_KEY_SCOPE = "scope"
+
+CONTENT_TYPE_TEXT = "text"
+CONTENT_TYPE_IMAGE_URL = "image_url"

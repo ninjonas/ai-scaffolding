@@ -1,3 +1,4 @@
+import base64
 import io
 import time
 from dataclasses import dataclass
@@ -72,3 +73,16 @@ def optimize_image(image_bytes: bytes) -> OptimizedImageResult:
         original_bytes=original_bytes,
         optimized_bytes=optimized_bytes,
     )
+
+
+BASE64_JPEG_PREFIX = "data:image/jpeg;base64,"
+
+
+def optimize_images_b64(images_b64: list[str]) -> list[str]:
+    """Optimize a list of base64 image strings. Always outputs JPEG base64."""
+    results = []
+    for img_b64 in images_b64:
+        raw = base64.b64decode(img_b64)
+        result = optimize_image(raw)
+        results.append(base64.b64encode(result.data).decode())
+    return results

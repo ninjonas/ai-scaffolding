@@ -89,6 +89,7 @@ class MapperPatternChecker(ast.NodeVisitor):
         # Skip routes that are route handlers or test functions
         if self._is_route_handler(func_node):
             self._check_route_body(func_node)
+            self._check_route_signature(func_node)
         else:
             self._check_service_body(func_node)
 
@@ -134,6 +135,110 @@ class MapperPatternChecker(ast.NodeVisitor):
                             "Use mapper function instead",
                             severity="warn",
                         )
+
+    def _check_route_signature(self, func_node) -> None:
+        """Warn when route handler has bare primitive query params instead of a QueryDTO."""
+        PRIMITIVE_NAMES = {"str", "int", "bool"}
+        EXCLUDED_PARAM_NAMES = {"request", "background_tasks"}
+
+        # Build a mapping from arg name -> default node (None means no default = path param)
+        args = func_node.args.args
+        defaults = func_node.args.defaults
+        # defaults aligns to the tail of args
+        defaults_offset = len(args) - len(defaults)
+        arg_defaults: dict[str, ast.AST | None] = {}
+        for i, arg in enumerate(args):
+            default_index = i - defaults_offset
+            arg_defaults[arg.arg] = defaults[default_index] if default_index >= 0 else None
+
+        for arg in func_node.args.args:
+            name = arg.arg
+            annotation = arg.annotation
+
+            # Skip self/cls and known dependency names
+            if name in ("self", "cls") or name in EXCLUDED_PARAM_NAMES:
+                continue
+
+            # Skip path params: primitives with no default are path parameters, not query params
+            if arg_defaults.get(name) is None:
+                continue
+
+            # Skip params ending in "Dep" (typed dependency aliases)
+            if name.endswith("Dep") or (annotation and self._annotation_ends_with_dep(annotation)):
+                continue
+
+            # Skip params injected via Annotated[..., Depends(...)]
+            if annotation and self._is_depends_annotated(annotation):
+                continue
+
+            # Skip params whose type names suggest a DTO or FastAPI type
+            if annotation and self._annotation_is_dto_or_fastapi(annotation):
+                continue
+
+            # Check if the annotation is a bare primitive or primitive | None
+            if annotation and self._is_primitive_annotation(annotation, PRIMITIVE_NAMES):
+                self._add_violation(
+                    func_node.lineno,
+                    "primitive_query_param",
+                    f"Bare primitive query param '{name}' in route handler signature",
+                    "Group query params into a Pydantic QueryDTO and inject via Depends()",
+                    severity="warn",
+                )
+
+    def _is_primitive_annotation(self, annotation: ast.AST, primitives: set[str]) -> bool:
+        """Return True if annotation is a bare primitive or primitive | None."""
+        # str, int, bool
+        if isinstance(annotation, ast.Name):
+            return annotation.id in primitives
+        # str | None, int | None, etc.
+        if isinstance(annotation, ast.BinOp) and isinstance(annotation.op, ast.BitOr):
+            left = annotation.left
+            right = annotation.right
+            left_is_prim = isinstance(left, ast.Name) and left.id in primitives
+            right_is_none = isinstance(right, ast.Constant) and right.value is None
+            right_is_none_name = isinstance(right, ast.Name) and right.id == "None"
+            if left_is_prim and (right_is_none or right_is_none_name):
+                return True
+        return False
+
+    def _is_depends_annotated(self, annotation: ast.AST) -> bool:
+        """Return True if annotation is Annotated[..., Depends(...)]."""
+        if not (isinstance(annotation, ast.Subscript) and isinstance(annotation.value, ast.Name)):
+            return False
+        if annotation.value.id != "Annotated":
+            return False
+        # Walk the slice looking for a Depends() call
+        for node in ast.walk(annotation.slice):
+            if isinstance(node, ast.Call):
+                func = node.func
+                if isinstance(func, ast.Name) and func.id == "Depends":
+                    return True
+                if isinstance(func, ast.Attribute) and func.attr == "Depends":
+                    return True
+        return False
+
+    def _annotation_ends_with_dep(self, annotation: ast.AST) -> bool:
+        """Return True if the annotation Name ends with 'Dep'."""
+        if isinstance(annotation, ast.Name):
+            return annotation.id.endswith("Dep")
+        return False
+
+    def _annotation_is_dto_or_fastapi(self, annotation: ast.AST) -> bool:
+        """Return True if annotation looks like a DTO, FastAPI, or known non-primitive type."""
+        SAFE_NAMES = {"Request", "BackgroundTasks", "Response"}
+        DTO_SUFFIXES = ("DTO", "Response", "Request", "Form", "Body", "Query")
+
+        def check_name(name: str) -> bool:
+            if name in SAFE_NAMES:
+                return True
+            return any(name.endswith(s) for s in DTO_SUFFIXES)
+
+        if isinstance(annotation, ast.Name):
+            return check_name(annotation.name if hasattr(annotation, "name") else annotation.id)
+        if isinstance(annotation, ast.Attribute):
+            return check_name(annotation.attr)
+        # Optional[X] or X | None where X is non-primitive handled elsewhere
+        return False
 
     def _check_service_body(self, func_node) -> None:
         """Check service method for dict/DTO construction."""

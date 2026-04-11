@@ -44,15 +44,30 @@ function ChatMessages({
 }
 
 export function Chat() {
-  const { messages, conversationId, loading, error, knowledgeRefreshKey, handleSend } =
-    useChatSend();
+  const {
+    messages,
+    conversationId,
+    loading,
+    error,
+    knowledgeRefreshKey,
+    handleSend,
+    handleNewChat,
+  } = useChatSend();
   const [showKnowledge, setShowKnowledge] = useState(false);
+
+  const onNewChat = () => {
+    handleNewChat();
+    setShowKnowledge(false);
+  };
 
   return (
     <div className="chat-layout">
       <div className="chat-container">
         <div className="chat-header">
           <h1>Scaffolding Chat</h1>
+          <button className="new-chat-btn" onClick={onNewChat} disabled={loading}>
+            New Chat
+          </button>
         </div>
         <ChatMessages messages={messages} loading={loading} error={error} />
         <ChatInput

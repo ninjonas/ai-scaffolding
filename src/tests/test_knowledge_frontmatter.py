@@ -1,6 +1,7 @@
 import pytest
 
 from app.service.knowledge_frontmatter import KEYS_PREFIX, detect_file_type, generate
+from app.shared.field_keys import CONTENT_TYPE_TEXT
 
 # -- detect_file_type --
 
@@ -78,14 +79,14 @@ def test_generate_txt_description_is_first_line():
 
 def test_generate_txt_tags_always_text():
     _, _, tags = generate("file.txt", "anything", "txt")
-    assert tags == ["text"]
+    assert tags == [CONTENT_TYPE_TEXT]
 
 
 def test_generate_txt_empty_content():
     name, desc, tags = generate("file.txt", "", "txt")
     assert name == "file"
     assert desc == ""
-    assert tags == ["text"]
+    assert tags == [CONTENT_TYPE_TEXT]
 
 
 # -- generate: json --

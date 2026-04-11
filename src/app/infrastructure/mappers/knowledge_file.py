@@ -17,6 +17,7 @@ class KnowledgeFileDataMapper:
         return KnowledgeFile(
             id=model.id,
             name=model.name,
+            filename=model.filename,
             description=model.description,
             content=model.content,
             file_type=model.file_type,
@@ -33,6 +34,7 @@ class KnowledgeFileDataMapper:
         model = KnowledgeFileModel(
             id=entity.id,
             name=entity.name,
+            filename=entity.filename,
             description=entity.description,
             content=entity.content,
             file_type=entity.file_type,

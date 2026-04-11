@@ -4,6 +4,7 @@ export interface ChatRequest {
   message: string;
   conversationId?: string;
   images?: string[];
+  imageFilenames?: string[];
   knowledgeFileIds?: string[];
 }
 

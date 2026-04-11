@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { sendMessage, type ToolCall } from '../api/chat';
-import { uploadKnowledgeFile } from '../api/knowledge';
 import type { AttachedImage } from './ChatInput';
 
 interface KnowledgeChip {
@@ -27,6 +26,7 @@ interface UseChatSendResult {
     images: AttachedImage[],
     knowledgeFiles: KnowledgeChip[],
   ) => Promise<void>;
+  handleNewChat: () => void;
 }
 
 export function useChatSend(): UseChatSendResult {
@@ -35,24 +35,6 @@ export function useChatSend(): UseChatSendResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [knowledgeRefreshKey, setKnowledgeRefreshKey] = useState(0);
-
-  const uploadImages = async (images: AttachedImage[], convId: string) => {
-    try {
-      await Promise.all(
-        images.map((img) =>
-          uploadKnowledgeFile({
-            filename: img.filename,
-            content: img.dataUrl.split(',')[1],
-            scope: 'conversation',
-            conversationId: convId,
-          }),
-        ),
-      );
-      setKnowledgeRefreshKey((k) => k + 1);
-    } catch {
-      // image knowledge upload is non-critical, swallow errors
-    }
-  };
 
   const handleSend = async (
     content: string,
@@ -75,6 +57,7 @@ export function useChatSend(): UseChatSendResult {
         message: content,
         conversationId,
         images: base64Images.length > 0 ? base64Images : undefined,
+        imageFilenames: images.length > 0 ? images.map((img) => img.filename) : undefined,
         knowledgeFileIds: knowledgeFiles.length > 0 ? knowledgeFiles.map((f) => f.id) : undefined,
       });
 
@@ -85,7 +68,7 @@ export function useChatSend(): UseChatSendResult {
       ]);
 
       if (images.length > 0) {
-        await uploadImages(images, response.conversationId);
+        setKnowledgeRefreshKey((k) => k + 1);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -94,5 +77,20 @@ export function useChatSend(): UseChatSendResult {
     }
   };
 
-  return { messages, conversationId, loading, error, knowledgeRefreshKey, handleSend };
+  const handleNewChat = () => {
+    setMessages([]);
+    setConversationId(undefined);
+    setError(undefined);
+    setKnowledgeRefreshKey(0);
+  };
+
+  return {
+    messages,
+    conversationId,
+    loading,
+    error,
+    knowledgeRefreshKey,
+    handleSend,
+    handleNewChat,
+  };
 }

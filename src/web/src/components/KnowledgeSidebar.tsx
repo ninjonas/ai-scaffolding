@@ -11,11 +11,11 @@ import { KnowledgeScopeTabBar } from './KnowledgeScopeTabBar';
 import { KnowledgeToastList } from './KnowledgeToastList';
 import { useKnowledgeUpload } from './useKnowledgeUpload';
 import { useKnowledgeDelete } from './useKnowledgeDelete';
+import { useKnowledgeToast } from './useKnowledgeToast';
 import { CloseIcon } from './KnowledgeIcons';
 
 const ACCEPTED_TYPES = '.md,.txt,.json,.yml';
 type Scope = 'project' | 'conversation';
-type Toast = { id: number; message: string; retry?: () => void };
 interface KnowledgeSidebarProps {
   conversationId?: string;
   onClose: () => void;
@@ -26,22 +26,16 @@ export function KnowledgeSidebar({ conversationId, onClose, refreshKey }: Knowle
   const [tab, setTab] = useState<Scope>('project');
   const [files, setFiles] = useState<KnowledgeCatalogEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [toasts, setToasts] = useState<Toast[]>([]);
   const [editFileId, setEditFileId] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [expandedTags, setExpandedTags] = useState<Record<string, boolean>>({});
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
-  const toastCounterRef = useRef(0);
-
-  const addToast = useCallback((message: string, retry?: () => void) => {
-    const id = ++toastCounterRef.current;
-    setToasts((prev) => [...prev, { id, message, retry }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), retry ? 5000 : 4000);
-  }, []);
+  const { toasts, addToast } = useKnowledgeToast();
 
   const fetchFiles = useCallback(async () => {
+    if (tab === 'conversation' && !conversationId) return;
     setLoading(true);
     try {
       const result = await listKnowledgeFiles(
@@ -61,7 +55,7 @@ export function KnowledgeSidebar({ conversationId, onClose, refreshKey }: Knowle
   }, [fetchFiles, refreshKey]);
 
   const handleUploadSuccess = useCallback((entry: KnowledgeCatalogEntry) => {
-    setFiles((prev) => [...prev, entry]);
+    setFiles((prev) => (prev.some((f) => f.id === entry.id) ? prev : [...prev, entry]));
     setAddingIds((prev) => new Set(prev).add(entry.id));
     setTimeout(
       () =>
