@@ -75,16 +75,12 @@ async def test_llm_generate_returns_empty_on_llm_exception() -> None:
 
 
 def test_coerce_tags_splits_comma_string() -> None:
-    schema = KnowledgeFrontmatterSchema(
-        name="Test", description="Desc", tags="python, ml, data"
-    )
+    schema = KnowledgeFrontmatterSchema(name="Test", description="Desc", tags="python, ml, data")
     assert schema.tags == ["python", "ml", "data"]
 
 
 def test_coerce_tags_passes_list_through() -> None:
-    schema = KnowledgeFrontmatterSchema(
-        name="Test", description="Desc", tags=["a", "b"]
-    )
+    schema = KnowledgeFrontmatterSchema(name="Test", description="Desc", tags=["a", "b"])
     assert schema.tags == ["a", "b"]
 
 

@@ -35,8 +35,14 @@ class KnowledgeService:
         log.info("knowledge_index_start", file_id=file.id)
         try:
             chunks = await self._indexer.index(
-                file.id, file.name, file.content, file.file_type, file.scope,
-                file.conversation_id, file.description, file.tags,
+                file.id,
+                file.name,
+                file.content,
+                file.file_type,
+                file.scope,
+                file.conversation_id,
+                file.description,
+                file.tags,
             )
             log.info("knowledge_index_done", file_id=file.id, chunk_count=chunks)
         except Exception as exc:

@@ -251,17 +251,79 @@
   outline: none;
 }
 
-.chat-input-row textarea {
+.textarea-wrapper {
   flex: 1;
+  position: relative;
+  align-self: center;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.mention-overlay {
+  position: absolute;
+  inset: 0;
+  padding: 4px 6px;
+  font: inherit;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mention-text-plain {
+  color: var(--text-h);
+}
+
+.mention-pill {
+  color: var(--accent);
+  background: rgba(167, 139, 250, 0.25);
+  border-radius: 3px;
+  pointer-events: auto;
+  position: relative;
+}
+
+.mention-pill-remove {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--accent);
+  opacity: 0.3;
+  line-height: 0;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+  transform: scale(0.85);
+}
+
+.mention-pill:hover .mention-pill-remove {
+  opacity: 0.7;
+  transform: scale(1);
+}
+
+.mention-pill-remove:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.chat-input-row textarea {
+  width: 100%;
   border: none;
   background: transparent;
   color: var(--text-h);
-  font: 15px/1.5 inherit;
+  font: inherit;
   resize: none;
   outline: none;
   padding: 4px 6px;
   min-height: 24px;
-  align-self: center;
+}
+
+.chat-input-row textarea.has-mentions {
+  color: transparent;
+  caret-color: var(--text-h);
 }
 
 .chat-input-row textarea::placeholder {

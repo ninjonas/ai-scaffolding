@@ -27,15 +27,7 @@ function ToolCallsSection({ toolCalls }: { toolCalls: ToolCall[] }) {
   );
 }
 
-function UserMessageContent({
-  images,
-  knowledgeFiles,
-  content,
-}: {
-  images?: string[];
-  knowledgeFiles?: KnowledgeChip[];
-  content: string;
-}) {
+function UserMessageContent({ images, content }: { images?: string[]; content: string }) {
   return (
     <>
       {images && images.length > 0 && (
@@ -50,28 +42,12 @@ function UserMessageContent({
           ))}
         </div>
       )}
-      {knowledgeFiles && knowledgeFiles.length > 0 && (
-        <div className="message-knowledge-chips">
-          {knowledgeFiles.map((kf) => (
-            <span key={kf.id} className="knowledge-chip knowledge-chip--static">
-              {kf.name}
-            </span>
-          ))}
-        </div>
-      )}
       <div className="message-content">{content}</div>
     </>
   );
 }
 
-export function MessageBubble({
-  role,
-  content,
-  toolCalls,
-  images,
-  knowledgeFiles,
-  loading,
-}: MessageBubbleProps) {
+export function MessageBubble({ role, content, toolCalls, images, loading }: MessageBubbleProps) {
   return (
     <div className={`message message-${role}${loading ? ' message-loading' : ''}`}>
       {role === 'assistant' && <div className="message-role">Assistant</div>}
@@ -82,7 +58,7 @@ export function MessageBubble({
           <span />
         </div>
       ) : (
-        <UserMessageContent images={images} knowledgeFiles={knowledgeFiles} content={content} />
+        <UserMessageContent images={images} content={content} />
       )}
       {!loading && toolCalls && toolCalls.length > 0 && <ToolCallsSection toolCalls={toolCalls} />}
     </div>

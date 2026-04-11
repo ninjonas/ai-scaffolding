@@ -10,7 +10,11 @@ from app.infrastructure.vector.knowledge_indexer import (
     _build_summary_chunk,
     _chunk_text,
 )
-from app.infrastructure.vector.knowledge_searcher import MIN_RELEVANCE_SCORE, build_search_filter
+from app.infrastructure.vector.knowledge_searcher import (
+    MIN_RELEVANCE_SCORE,
+    MIN_RELEVANCE_SCORE_CONVERSATION,
+    build_search_filter,
+)
 
 
 class TestChunkText:
@@ -59,7 +63,11 @@ class TestBuildSummaryChunk:
 
     def test_returns_single_summary_chunk(self):
         ids, docs, metas = _build_summary_chunk(
-            "f1", "My File", "A description", ["tag1", "tag2"], self._BASE_META,
+            "f1",
+            "My File",
+            "A description",
+            ["tag1", "tag2"],
+            self._BASE_META,
         )
         assert len(ids) == 1
         assert ids[0] == "f1_summary"
@@ -71,14 +79,22 @@ class TestBuildSummaryChunk:
 
     def test_summary_with_no_tags(self):
         _ids, docs, metas = _build_summary_chunk(
-            "f1", "Name", "Desc", None, self._BASE_META,
+            "f1",
+            "Name",
+            "Desc",
+            None,
+            self._BASE_META,
         )
         assert "Tags:" in docs[0]
         assert metas[0]["doc_type"] == DOC_TYPE_SUMMARY
 
     def test_summary_with_empty_description(self):
         _, docs, _ = _build_summary_chunk(
-            "f1", "Name", "", ["t1"], self._BASE_META,
+            "f1",
+            "Name",
+            "",
+            ["t1"],
+            self._BASE_META,
         )
         assert docs[0] == "Name.  Tags: t1"
 
@@ -88,6 +104,10 @@ class TestKnowledgeSearcherFiltering:
 
     def test_min_relevance_score_is_defined(self):
         assert MIN_RELEVANCE_SCORE == 0.3
+
+    def test_conversation_relevance_score_is_lower(self):
+        assert MIN_RELEVANCE_SCORE_CONVERSATION == 0.15
+        assert MIN_RELEVANCE_SCORE_CONVERSATION < MIN_RELEVANCE_SCORE
 
     def test_score_below_threshold_excluded(self):
         """Simulate the filtering logic from KnowledgeSearcher.search."""
@@ -100,6 +120,14 @@ class TestKnowledgeSearcherFiltering:
             hits.append(score)
         assert len(hits) == 1
         assert hits[0] == pytest.approx(0.9)
+
+    def test_conversation_scope_uses_lower_threshold(self):
+        """Image summaries scoring 0.2 survive conversation threshold but not project."""
+        distances = [0.1, 0.8]  # scores: 0.9, 0.2
+        project_hits = [1.0 - d for d in distances if (1.0 - d) >= MIN_RELEVANCE_SCORE]
+        convo_hits = [1.0 - d for d in distances if (1.0 - d) >= MIN_RELEVANCE_SCORE_CONVERSATION]
+        assert len(project_hits) == 1
+        assert len(convo_hits) == 2
 
     def test_deduplication_keeps_first_chunk(self):
         """Simulate the deduplication logic from KnowledgeSearcher.search."""

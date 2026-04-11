@@ -98,7 +98,11 @@ class KnowledgeIndexer:
         }
 
         all_ids, all_docs, all_metas = _build_summary_chunk(
-            file_id, name, description, tags, base_meta,
+            file_id,
+            name,
+            description,
+            tags,
+            base_meta,
         )
 
         if not is_image(file_type):

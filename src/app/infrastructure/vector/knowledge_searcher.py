@@ -16,6 +16,7 @@ from app.shared.field_keys import (
 log = structlog.get_logger()
 
 MIN_RELEVANCE_SCORE = 0.3
+MIN_RELEVANCE_SCORE_CONVERSATION = 0.15
 
 
 def build_search_filter(scope: str, conversation_id: str | None = None) -> dict:
@@ -96,7 +97,12 @@ class KnowledgeSearcher:
             distances = results["distances"][0]
             for doc, meta, dist in zip(docs, metas, distances, strict=False):
                 score = 1.0 - dist
-                if score < MIN_RELEVANCE_SCORE:
+                threshold = (
+                    MIN_RELEVANCE_SCORE_CONVERSATION
+                    if scope == SCOPE_CONVERSATION
+                    else MIN_RELEVANCE_SCORE
+                )
+                if score < threshold:
                     continue
                 fid = meta.get("file_id", "")
                 if fid in seen_files:

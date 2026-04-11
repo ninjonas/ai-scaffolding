@@ -70,7 +70,7 @@ def poll_enriched(client: httpx.Client, file_id: str, label: str) -> bool:
 
 
 def step_upload_project_files(client: httpx.Client) -> list[dict]:
-    print("\n[1/7] Uploading project knowledge files...")
+    print("\n[1/8] Uploading project knowledge files...")
     uploaded = []
     for filename, content in PROJECT_FILES.items():
         resp = client.post(
@@ -85,14 +85,14 @@ def step_upload_project_files(client: httpx.Client) -> list[dict]:
 
 
 def step_wait_enrichment(client: httpx.Client, files: list[dict]) -> None:
-    print("\n[2/7] Waiting for LLM enrichment...")
+    print("\n[2/8] Waiting for LLM enrichment...")
     time.sleep(3)
     for f in files:
         poll_enriched(client, f["id"], f.get("filename", f["id"]))
 
 
 def step_first_chat(client: httpx.Client) -> str:
-    print("\n[3/7] Sending first chat message...")
+    print("\n[3/8] Sending first chat message...")
     resp = client.post(
         f"{BASE_URL}/api/chat",
         json={"message": "Who is Ted Pim and what kind of art does he make?"},
@@ -107,35 +107,82 @@ def step_first_chat(client: httpx.Client) -> str:
     return conv_id
 
 
-def step_upload_image(client: httpx.Client, conversation_id: str) -> dict:
-    print("\n[4/7] Uploading conversation image...")
+def step_chat_with_image(client: httpx.Client, conversation_id: str) -> None:
+    """Send image through the chat endpoint, matching real user flow.
+
+    The chat service indexes and enriches images synchronously before the
+    agent responds, so RAG context is available from the first turn.
+    """
+    print("\n[4/8] Sending chat message with attached image...")
     img_path = TMP_DIR / "TedPim_CoverImage_web.jpg"
     img_b64 = base64.b64encode(img_path.read_bytes()).decode()
     resp = client.post(
-        f"{BASE_URL}/api/knowledge",
+        f"{BASE_URL}/api/chat",
         json={
-            "filename": "TedPim_CoverImage_web.jpg",
-            "content": img_b64,
-            "scope": "conversation",
+            "message": "What do you see in this image?",
+            "conversationId": conversation_id,
+            "images": [img_b64],
+            "imageFilenames": ["TedPim_CoverImage_web.jpg"],
+        },
+    )
+    ok = resp.status_code == 200
+    msg = resp.json().get("message", "").lower() if ok else ""
+    sees_image = any(
+        w in msg for w in ["image", "artwork", "portrait", "painting", "figure", "weep"]
+    )
+    check("chat+image response received", ok, f"status={resp.status_code}")
+    check("first-turn response describes image", sees_image, msg[:120])
+
+
+def step_verify_image_indexed(client: httpx.Client, conversation_id: str) -> None:
+    """Verify the image landed in the knowledge base and was enriched.
+
+    Because indexing now happens before the agent responds, the image
+    should already be enriched by the time the chat call returns.
+    """
+    print("\n[5/8] Verifying image is indexed and enriched...")
+    resp = client.get(
+        f"{BASE_URL}/api/knowledge",
+        params={"scope": "conversation", "conversationId": conversation_id},
+    )
+    ok = resp.status_code == 200
+    files = resp.json() if ok else []
+    image_files = [f for f in files if f.get("fileType", f.get("file_type", "")) in ("jpg", "jpeg")]
+    has_image = len(image_files) >= 1
+    check("image in knowledge base", has_image, f"found {len(image_files)} image(s)")
+    if has_image:
+        enriched = image_files[0].get("enriched", False)
+        check("image already enriched", enriched)
+
+
+def step_followup_about_image(client: httpx.Client, conversation_id: str) -> None:
+    """Follow-up asking about the image without re-uploading.
+
+    This is the exact scenario that was broken: the agent used RAG
+    search_knowledge but scored below MIN_RELEVANCE_SCORE, returning
+    'No relevant documents found.' The fix lowers the conversation
+    threshold to 0.15 so image summaries survive filtering.
+    """
+    print("\n[6/8] Follow-up: asking about the uploaded image (RAG retrieval)...")
+    resp = client.post(
+        f"{BASE_URL}/api/chat",
+        json={
+            "message": "Tell me more about the image I uploaded",
             "conversationId": conversation_id,
         },
     )
     ok = resp.status_code == 200
-    check("image upload", ok, f"status={resp.status_code}")
-    return resp.json() if ok else {}
-
-
-def step_wait_image_enrichment(client: httpx.Client, img: dict) -> None:
-    print("\n[5/7] Waiting for image enrichment...")
-    if not img.get("id"):
-        check("image enrichment", False, "no image id")
-        return
-    time.sleep(3)
-    poll_enriched(client, img["id"], "image")
+    msg = resp.json().get("message", "").lower() if ok else ""
+    recalls_image = any(
+        w in msg
+        for w in ["image", "artwork", "portrait", "painting", "figure", "weep", "three"]
+    )
+    check("response received", ok, f"status={resp.status_code}")
+    check("follow-up recalls image content via RAG", recalls_image, msg[:120])
 
 
 def step_color_chat(client: httpx.Client, conversation_id: str) -> None:
-    print("\n[6/7] Asking about colors...")
+    print("\n[7/8] Asking about colors...")
     resp = client.post(
         f"{BASE_URL}/api/chat",
         json={
@@ -152,22 +199,30 @@ def step_color_chat(client: httpx.Client, conversation_id: str) -> None:
     check("response references colors/palette", mentions_color, msg[:120])
 
 
-def step_image_chat(client: httpx.Client, conversation_id: str) -> None:
-    print("\n[7/7] Asking about uploaded image...")
+def step_cross_reference(client: httpx.Client, conversation_id: str) -> None:
+    """Ask a question that requires connecting the image to project knowledge.
+
+    The agent needs both the conversation-scoped image and the
+    project-scoped artist files to answer well.
+    """
+    print("\n[8/8] Cross-referencing image with project knowledge...")
     resp = client.post(
         f"{BASE_URL}/api/chat",
         json={
-            "message": "Tell me about the image I uploaded",
+            "message": (
+                "Does the image I uploaded match Ted Pim's style "
+                "based on what you know about his work?"
+            ),
             "conversationId": conversation_id,
         },
     )
     ok = resp.status_code == 200
     msg = resp.json().get("message", "").lower() if ok else ""
-    mentions_image = any(
-        w in msg for w in ["image", "artwork", "portrait", "painting", "ted pim", "photo"]
+    connects = any(
+        w in msg for w in ["style", "pim", "portrait", "distortion", "classical", "decay"]
     )
     check("response received", ok, f"status={resp.status_code}")
-    check("response references image/artwork", mentions_image, msg[:120])
+    check("response connects image to artist style", connects, msg[:120])
 
 
 def main() -> None:
@@ -182,14 +237,15 @@ def main() -> None:
         print("\nNo conversation_id returned, cannot continue.")
         sys.exit(1)
 
-    img = step_upload_image(client, conversation_id)
-    step_wait_image_enrichment(client, img)
+    step_chat_with_image(client, conversation_id)
+    step_verify_image_indexed(client, conversation_id)
+    step_followup_about_image(client, conversation_id)
     step_color_chat(client, conversation_id)
-    step_image_chat(client, conversation_id)
+    step_cross_reference(client, conversation_id)
 
     passed = sum(results)
     total = len(results)
-    print(f"\n{'='*40}")
+    print(f"\n{'=' * 40}")
     print(f"Results: {passed}/{total} passed")
     sys.exit(0 if all(results) else 1)
 
