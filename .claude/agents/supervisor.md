@@ -1,5 +1,5 @@
 ---
-model: opus
+model: sonnet
 description: Orchestrates all implementation work by routing tasks to specialized Claude sub-agents and coordinating parallel waves via git worktrees.
 tools:
   - Agent
@@ -95,7 +95,8 @@ Confirm the branch name with the user before creating it. Do NOT proceed until a
 
 ### Implementation waves
 
-Use Claude sub-agents with `isolation: "worktree"` for parallel tasks:
+**All parallel agents MUST use `isolation: "worktree"`** — no exceptions.
+Sequential agents (test, reviewer) run without isolation on the working branch.
 
 ```
 Agent({
@@ -108,6 +109,13 @@ Agent({
     Run just check after changes. Return JSON per your output format.
     Phase: <N>"
 })
+```
+
+When an agent with `isolation: "worktree"` makes changes, it returns `worktree_path` and `branch` in its result. After merging, delete the worktree:
+
+```bash
+git worktree remove --force <worktree_path>
+git branch -d <branch>
 ```
 
 ### Test wave
@@ -149,7 +157,8 @@ If conflicts exist, sequence the agents.
 After a parallel wave completes:
 1. Switch to the working branch
 2. Merge each agent's worktree branch one at a time
-3. Verify clean before starting next wave
+3. Delete the worktree and its branch: `git worktree remove --force <path> && git branch -d <branch>`
+4. Verify clean before starting next wave
 
 ## Standard Agent Output Format
 
