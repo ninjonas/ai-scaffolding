@@ -88,7 +88,7 @@ def _make_file(file_id: str, content: str) -> KnowledgeFile:
 async def test_read_knowledge_file_returns_content():
     kf = _make_file("f1", "hello world")
     repo = _FakeRepo({"f1": kf})
-    tool = make_read_knowledge_file_tool(repo)
+    tool = make_read_knowledge_file_tool(lambda: repo)
     result = await tool.ainvoke({"file_id": "f1"})
     assert result == "hello world"
 
@@ -96,6 +96,6 @@ async def test_read_knowledge_file_returns_content():
 @pytest.mark.asyncio
 async def test_read_knowledge_file_not_found_returns_message():
     repo = _FakeRepo({})
-    tool = make_read_knowledge_file_tool(repo)
+    tool = make_read_knowledge_file_tool(lambda: repo)
     result = await tool.ainvoke({"file_id": "missing"})
     assert "not found" in result.lower()

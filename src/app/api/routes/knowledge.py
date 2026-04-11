@@ -1,15 +1,16 @@
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from app.api.dto.knowledge import (
+    KnowledgeCatalogEntryDTO,
     KnowledgeFileResponseDTO,
     KnowledgeFileUpdateDTO,
     KnowledgeFileUploadDTO,
     KnowledgeListQueryDTO,
 )
-from app.api.mappers.knowledge_file import KnowledgeFileApiMapper
+from app.infrastructure.mappers.knowledge_file import KnowledgeFileApiMapper
 from app.service.knowledge import ERR_FILE_NOT_FOUND, KnowledgeService
 
 log = structlog.get_logger()
@@ -52,11 +53,11 @@ async def upload_file(
     return dto
 
 
-@router.get("", response_model=list[KnowledgeFileResponseDTO])
+@router.get("", response_model=list[KnowledgeCatalogEntryDTO])
 async def list_files(
     knowledge_service: KnowledgeServiceDep,
     query: Annotated[KnowledgeListQueryDTO, Depends()],
-) -> list[KnowledgeFileResponseDTO]:
+) -> list[KnowledgeCatalogEntryDTO]:
     log.info(
         "knowledge_list_request",
         method="GET",
@@ -68,7 +69,7 @@ async def list_files(
         scope=query.scope, conversation_id=query.conversation_id
     )
     log.info("knowledge_list_response", count=len(entities))
-    return [KnowledgeFileApiMapper.to_response_dto(e) for e in entities]
+    return [KnowledgeFileApiMapper.to_catalog_entry_dto(e) for e in entities]
 
 
 @router.get("/{file_id}", response_model=KnowledgeFileResponseDTO)
@@ -79,8 +80,6 @@ async def get_file(
     log.info("knowledge_get_request", method="GET", path=KNOWLEDGE_ROUTE_PREFIX, file_id=file_id)
     entity = await knowledge_service.get(file_id)
     if entity is None:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail=f"{ERR_FILE_NOT_FOUND}{file_id}")
     dto = KnowledgeFileApiMapper.to_response_dto(entity)
     log.info("knowledge_get_response", file_id=file_id)

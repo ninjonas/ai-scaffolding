@@ -9,7 +9,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import RunnableLambda
 
-from app.agents.tools.knowledge_frontmatter_llm import (
+from app.service.knowledge_frontmatter_llm import (
     KnowledgeFrontmatterSchema,
     llm_generate,
 )

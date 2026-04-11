@@ -1,10 +1,9 @@
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 
 import structlog
 from langchain_core.language_models import BaseChatModel
 
-from app.agents.tools.knowledge_frontmatter_llm import llm_describe_image, llm_generate
 from app.domain.entities.knowledge_file import (
     SCOPE_CONVERSATION,
     KnowledgeFile,
@@ -12,6 +11,7 @@ from app.domain.entities.knowledge_file import (
 from app.infrastructure.mappers.knowledge_file import KnowledgeFileDataMapper
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from app.service.knowledge_frontmatter import detect_file_type, generate, is_image
+from app.service.knowledge_frontmatter_llm import llm_describe_image, llm_generate
 
 log = structlog.get_logger()
 
@@ -106,7 +106,7 @@ class KnowledgeService:
                 tags=tags if tags is not None else existing.tags,
                 conversation_id=existing.conversation_id,
                 created_at=existing.created_at,
-                updated_at=datetime.utcnow(),
+                updated_at=datetime.now(UTC),
             )
 
             await uow.knowledge.save(updated)
@@ -169,29 +169,26 @@ class KnowledgeService:
             else:
                 name, description, tags = "", "", []
 
-            if description or tags:
-                await self.update(file_id, description=description, tags=tags)
-
             async with self._uow_factory() as uow:
                 existing = await uow.knowledge.get_by_id(file_id)
                 if existing is not None:
-                    enriched_file = KnowledgeFile(
+                    updated = KnowledgeFile(
                         id=existing.id,
-                        name=existing.name,
+                        name=name if name else existing.name,
                         filename=existing.filename,
-                        description=existing.description,
+                        description=description if description else existing.description,
                         content=existing.content,
                         file_type=existing.file_type,
                         scope=existing.scope,
-                        tags=existing.tags,
+                        tags=tags if tags else existing.tags,
                         enriched=True,
                         conversation_id=existing.conversation_id,
                         created_at=existing.created_at,
-                        updated_at=datetime.utcnow(),
+                        updated_at=datetime.now(UTC),
                     )
-                    await uow.knowledge.save(enriched_file)
+                    await uow.knowledge.save(updated)
                     await uow.commit()
 
             log.info("knowledge_enrich_done", file_id=file_id, llm_used=bool(name))
         except Exception as exc:
-            log.warning("knowledge_enrich_error", file_id=file_id, error=str(exc))
+            log.warning("knowledge_enrich_error", file_id=file_id, error=str(exc), exc_info=exc)

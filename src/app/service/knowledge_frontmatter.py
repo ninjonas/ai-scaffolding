@@ -80,7 +80,12 @@ def _from_json(filename: str, content: str) -> tuple[str, str, list[str]]:
     try:
         return _extract_from_mapping(filename, json.loads(content))
     except Exception as exc:
-        log.warning("knowledge_frontmatter_json_parse_error", filename=filename, error=str(exc))
+        log.warning(
+            "knowledge_frontmatter_json_parse_error",
+            filename=filename,
+            error=str(exc),
+            exc_info=exc,
+        )
         return _stem(filename), "", []
 
 
@@ -88,7 +93,12 @@ def _from_yml(filename: str, content: str) -> tuple[str, str, list[str]]:
     try:
         return _extract_from_mapping(filename, yaml.safe_load(content))
     except Exception as exc:
-        log.warning("knowledge_frontmatter_yml_parse_error", filename=filename, error=str(exc))
+        log.warning(
+            "knowledge_frontmatter_yml_parse_error",
+            filename=filename,
+            error=str(exc),
+            exc_info=exc,
+        )
         return _stem(filename), "", []
 
 

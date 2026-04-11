@@ -32,12 +32,14 @@ class ChatService:
         conversation_id: str | None = None,
         images: list[str] | None = None,
         image_filenames: list[str] | None = None,
+        knowledge_file_ids: list[str] | None = None,
     ) -> Message:
         log.info(
             "send_message_start",
             conversation_id=conversation_id,
             has_images=bool(images),
             content_length=len(content),
+            knowledge_file_count=len(knowledge_file_ids or []),
         )
         start = time.monotonic()  # timing: operation-level
 

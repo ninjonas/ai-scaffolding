@@ -1,13 +1,15 @@
 import json
 from datetime import datetime
 
-from app.api.mappers.knowledge_file import KnowledgeFileApiMapper
 from app.domain.entities.knowledge_file import (
     SCOPE_CONVERSATION,
     SCOPE_PROJECT,
     KnowledgeFile,
 )
-from app.infrastructure.mappers.knowledge_file import KnowledgeFileDataMapper
+from app.infrastructure.mappers.knowledge_file import (
+    KnowledgeFileApiMapper,
+    KnowledgeFileDataMapper,
+)
 from app.infrastructure.models.knowledge_file import KnowledgeFileModel
 from app.shared.field_keys import (
     FIELD_KEY_DESCRIPTION,

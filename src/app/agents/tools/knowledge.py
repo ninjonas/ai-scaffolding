@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 import structlog
 from langchain_core.tools import tool
 
@@ -45,8 +47,8 @@ def build_knowledge_catalog(catalog: list[dict]) -> str:
     return CATALOG_HEADER + "\n".join(lines)
 
 
-def make_read_knowledge_file_tool(repository: KnowledgeFileRepository):
-    """Factory that closes over a KnowledgeFileRepository and returns the tool."""
+def make_read_knowledge_file_tool(repository_factory: Callable[[], KnowledgeFileRepository]):
+    """Factory that closes over a KnowledgeFileRepository factory and returns the tool."""
 
     @tool
     async def read_knowledge_file(file_id: str) -> str:
@@ -56,6 +58,7 @@ def make_read_knowledge_file_tool(repository: KnowledgeFileRepository):
         knowledge base catalog. The catalog shows file name, description,
         and tags to help you decide which files are relevant.
         """
+        repository = repository_factory()
         log.info("knowledge_file_read_start", file_id=file_id)
         knowledge_file = await repository.get_by_id(file_id)
         if knowledge_file is None:

@@ -12,6 +12,12 @@ class KnowledgeFileUploadDTO(CamelModel):
     scope: str  # "project" | "conversation"
     conversation_id: str | None = None
 
+    @model_validator(mode="after")
+    def conversation_id_required_for_conversation_scope(self) -> "KnowledgeFileUploadDTO":
+        if self.scope == SCOPE_CONVERSATION and not self.conversation_id:
+            raise ValueError("conversationId is required when scope=conversation")
+        return self
+
 
 class KnowledgeListQueryDTO(CamelModel):
     scope: str | None = None
@@ -49,8 +55,12 @@ class KnowledgeFileResponseDTO(CamelModel):
 class KnowledgeCatalogEntryDTO(CamelModel):
     id: str
     name: str
+    filename: str = ""
     description: str
     tags: list[str] = Field(default_factory=list)
     file_type: str
     scope: str
     enriched: bool = False
+    conversation_id: str | None = None
+    created_at: datetime
+    updated_at: datetime

@@ -77,7 +77,9 @@ async def llm_describe_image(
         )
         return result.name, result.description, result.tags
     except Exception as exc:
-        log.warning("knowledge_llm_image_describe_error", error=str(exc), file_type=file_type)
+        log.warning(
+            "knowledge_llm_image_describe_error", error=str(exc), file_type=file_type, exc_info=exc
+        )
         return "", "", []
 
 
@@ -106,5 +108,7 @@ async def llm_generate(
         )
         return result.name, result.description, result.tags
     except Exception as exc:
-        log.warning("knowledge_llm_frontmatter_error", error=str(exc), file_type=file_type)
+        log.warning(
+            "knowledge_llm_frontmatter_error", error=str(exc), file_type=file_type, exc_info=exc
+        )
         return "", "", []
