@@ -70,13 +70,13 @@ src/web/src/
 - [x] Create data mapper: `KnowledgeFileModel` \<-> `KnowledgeFile` entity.
 - [x] Wire into database init (table creation).
 
-### Phase 2: Frontmatter generation service `Not Started`
+### Phase 2: Frontmatter generation service `Done`
 
-- [ ] Create `KnowledgeService` in `src/app/service/knowledge.py`.
-- [ ] Implement `upload(filename, content, scope, conversation_id?)`: detect file type, auto-generate frontmatter (name from filename, description from first meaningful lines, tags from content heuristics), store via repository.
-- [ ] Implement `update(id, name?, description?, tags?, content?)` for editing.
-- [ ] Implement `delete(id)` and `list(scope?, conversation_id?)`.
-- [ ] Implement `get_catalog(scope?, conversation_id?)` returning frontmatter-only list.
+- [x] Create `KnowledgeService` in `src/app/service/knowledge.py`.
+- [x] Implement `upload(filename, content, scope, conversation_id?)`: detect file type, auto-generate frontmatter (name from filename, description from first meaningful lines, tags from content heuristics), store via repository.
+- [x] Implement `update(id, name?, description?, tags?, content?)` for editing.
+- [x] Implement `delete(id)` and `list(scope?, conversation_id?)`.
+- [x] Implement `get_catalog(scope?, conversation_id?)` returning frontmatter-only list.
 
 ### Phase 3: Agent integration (catalog + tool) `Not Started`
 
@@ -287,3 +287,4 @@ No new dependencies. Uses existing React, fetch API.
 | ---------- | -------------- | ------------------------------------------------------------------------------------------------------- |
 | 2026-04-10 | Jonas + Claude | Initial draft                                                                                           |
 | 2026-04-10 | Claude         | Migrated to new plan format: added phase statuses, task checkboxes, agent execution strategy, changelog |
+| 2026-04-10 | Claude (api)   | Phase 2 complete: KnowledgeService + knowledge_frontmatter module implemented, all checks pass          |
