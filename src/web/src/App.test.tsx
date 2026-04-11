@@ -12,7 +12,7 @@ describe('App', () => {
 
   it('shows empty state message', () => {
     render(<App />);
-    expect(screen.getByText('Send a message to start a conversation.')).toBeInTheDocument();
+    expect(screen.getByText('Hi there, how can I help?')).toBeInTheDocument();
   });
 });
 
