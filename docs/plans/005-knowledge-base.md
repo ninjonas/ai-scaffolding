@@ -61,14 +61,14 @@ src/web/src/
 
 ## Implementation Phases
 
-### Phase 1: Domain and persistence `Not Started`
+### Phase 1: Domain and persistence `Done`
 
-- [ ] Create `KnowledgeFile` entity with fields: `id`, `name`, `description`, `tags`, `content`, `file_type`, `scope` (project | conversation), `conversation_id` (nullable), `created_at`, `updated_at`.
-- [ ] Create `KnowledgeFileRepository` protocol in `domain/repositories/`.
-- [ ] Create `KnowledgeFileModel` SQLAlchemy model. Tags stored as JSON array in a `tags_json` column (same pattern as `images_json` on `MessageModel`).
-- [ ] Create SQLAlchemy repository implementation.
-- [ ] Create data mapper: `KnowledgeFileModel` \<-> `KnowledgeFile` entity.
-- [ ] Wire into database init (table creation).
+- [x] Create `KnowledgeFile` entity with fields: `id`, `name`, `description`, `tags`, `content`, `file_type`, `scope` (project | conversation), `conversation_id` (nullable), `created_at`, `updated_at`.
+- [x] Create `KnowledgeFileRepository` protocol in `domain/repositories/`.
+- [x] Create `KnowledgeFileModel` SQLAlchemy model. Tags stored as JSON array in a `tags_json` column (same pattern as `images_json` on `MessageModel`).
+- [x] Create SQLAlchemy repository implementation.
+- [x] Create data mapper: `KnowledgeFileModel` \<-> `KnowledgeFile` entity.
+- [x] Wire into database init (table creation).
 
 ### Phase 2: Frontmatter generation service `Not Started`
 
