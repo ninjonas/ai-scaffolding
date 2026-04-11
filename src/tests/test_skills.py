@@ -6,6 +6,7 @@ from app.agents.skills.calculator.tools import calculate
 from app.agents.skills.file_ops.tools import list_directory, read_file
 from app.agents.skills.loader import build_skill_catalog, load_skill
 from app.agents.skills.web_search.tools import MOCK_RESULTS, search_web
+from app.shared.field_keys import FIELD_KEY_DESCRIPTION, FIELD_KEY_NAME
 
 # -- calculate --
 
@@ -170,8 +171,8 @@ def test_build_skill_catalog_contains_file_ops():
 def test_build_skill_catalog_entries_have_name_and_description():
     catalog = build_skill_catalog()
     for skill in catalog:
-        assert "name" in skill
-        assert "description" in skill
+        assert FIELD_KEY_NAME in skill
+        assert FIELD_KEY_DESCRIPTION in skill
 
 
 # -- load_skill --

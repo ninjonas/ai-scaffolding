@@ -24,11 +24,11 @@ Usage:
     check_mapper_patterns.py [--dir <path>]   # check specific directory
     check_mapper_patterns.py                   # check api/ and service/ files
 """
+
 import ast
 import re
 import sys
 from pathlib import Path
-from typing import Optional
 
 RED = "\033[0;31m"
 YELLOW = "\033[1;33m"
@@ -89,6 +89,7 @@ class MapperPatternChecker(ast.NodeVisitor):
         # Skip routes that are route handlers or test functions
         if self._is_route_handler(func_node):
             self._check_route_body(func_node)
+            self._check_route_signature(func_node)
         else:
             self._check_service_body(func_node)
 
@@ -111,9 +112,9 @@ class MapperPatternChecker(ast.NodeVisitor):
             if isinstance(node, ast.Dict):
                 source_line = self._get_source_line(node.lineno)
                 # Skip if it's in a type hint or logging context
-                if not self._is_type_hint_context(
-                    node
-                ) and not self._is_logging_context(source_line):
+                if not self._is_type_hint_context(node) and not self._is_logging_context(
+                    source_line
+                ):
                     self._add_violation(
                         node.lineno,
                         "dict_in_route",
@@ -135,15 +136,119 @@ class MapperPatternChecker(ast.NodeVisitor):
                             severity="warn",
                         )
 
+    def _check_route_signature(self, func_node) -> None:
+        """Warn when route handler has bare primitive query params instead of a QueryDTO."""
+        PRIMITIVE_NAMES = {"str", "int", "bool"}
+        EXCLUDED_PARAM_NAMES = {"request", "background_tasks"}
+
+        # Build a mapping from arg name -> default node (None means no default = path param)
+        args = func_node.args.args
+        defaults = func_node.args.defaults
+        # defaults aligns to the tail of args
+        defaults_offset = len(args) - len(defaults)
+        arg_defaults: dict[str, ast.AST | None] = {}
+        for i, arg in enumerate(args):
+            default_index = i - defaults_offset
+            arg_defaults[arg.arg] = defaults[default_index] if default_index >= 0 else None
+
+        for arg in func_node.args.args:
+            name = arg.arg
+            annotation = arg.annotation
+
+            # Skip self/cls and known dependency names
+            if name in ("self", "cls") or name in EXCLUDED_PARAM_NAMES:
+                continue
+
+            # Skip path params: primitives with no default are path parameters, not query params
+            if arg_defaults.get(name) is None:
+                continue
+
+            # Skip params ending in "Dep" (typed dependency aliases)
+            if name.endswith("Dep") or (annotation and self._annotation_ends_with_dep(annotation)):
+                continue
+
+            # Skip params injected via Annotated[..., Depends(...)]
+            if annotation and self._is_depends_annotated(annotation):
+                continue
+
+            # Skip params whose type names suggest a DTO or FastAPI type
+            if annotation and self._annotation_is_dto_or_fastapi(annotation):
+                continue
+
+            # Check if the annotation is a bare primitive or primitive | None
+            if annotation and self._is_primitive_annotation(annotation, PRIMITIVE_NAMES):
+                self._add_violation(
+                    func_node.lineno,
+                    "primitive_query_param",
+                    f"Bare primitive query param '{name}' in route handler signature",
+                    "Group query params into a Pydantic QueryDTO and inject via Depends()",
+                    severity="warn",
+                )
+
+    def _is_primitive_annotation(self, annotation: ast.AST, primitives: set[str]) -> bool:
+        """Return True if annotation is a bare primitive or primitive | None."""
+        # str, int, bool
+        if isinstance(annotation, ast.Name):
+            return annotation.id in primitives
+        # str | None, int | None, etc.
+        if isinstance(annotation, ast.BinOp) and isinstance(annotation.op, ast.BitOr):
+            left = annotation.left
+            right = annotation.right
+            left_is_prim = isinstance(left, ast.Name) and left.id in primitives
+            right_is_none = isinstance(right, ast.Constant) and right.value is None
+            right_is_none_name = isinstance(right, ast.Name) and right.id == "None"
+            if left_is_prim and (right_is_none or right_is_none_name):
+                return True
+        return False
+
+    def _is_depends_annotated(self, annotation: ast.AST) -> bool:
+        """Return True if annotation is Annotated[..., Depends(...)]."""
+        if not (isinstance(annotation, ast.Subscript) and isinstance(annotation.value, ast.Name)):
+            return False
+        if annotation.value.id != "Annotated":
+            return False
+        # Walk the slice looking for a Depends() call
+        for node in ast.walk(annotation.slice):
+            if isinstance(node, ast.Call):
+                func = node.func
+                if isinstance(func, ast.Name) and func.id == "Depends":
+                    return True
+                if isinstance(func, ast.Attribute) and func.attr == "Depends":
+                    return True
+        return False
+
+    def _annotation_ends_with_dep(self, annotation: ast.AST) -> bool:
+        """Return True if the annotation Name ends with 'Dep'."""
+        if isinstance(annotation, ast.Name):
+            return annotation.id.endswith("Dep")
+        return False
+
+    def _annotation_is_dto_or_fastapi(self, annotation: ast.AST) -> bool:
+        """Return True if annotation looks like a DTO, FastAPI, or known non-primitive type."""
+        SAFE_NAMES = {"Request", "BackgroundTasks", "Response"}
+        DTO_SUFFIXES = ("DTO", "Response", "Request", "Form", "Body", "Query")
+
+        def check_name(name: str) -> bool:
+            if name in SAFE_NAMES:
+                return True
+            return any(name.endswith(s) for s in DTO_SUFFIXES)
+
+        if isinstance(annotation, ast.Name):
+            return check_name(annotation.name if hasattr(annotation, "name") else annotation.id)
+        if isinstance(annotation, ast.Attribute):
+            return check_name(annotation.attr)
+        # Optional[X] or X | None where X is non-primitive handled elsewhere
+        return False
+
     def _check_service_body(self, func_node) -> None:
         """Check service method for dict/DTO construction."""
         for node in ast.walk(func_node):
             # Check for dict literals
             if isinstance(node, ast.Dict):
                 source_line = self._get_source_line(node.lineno)
-                if not self._is_type_hint_context(
-                    node
-                ) and not self._is_logging_context(source_line):
+                if not self._is_type_hint_context(node) and not self._is_logging_context(
+                    source_line
+                ):
                     self._add_violation(
                         node.lineno,
                         "dict_in_service",
@@ -170,9 +275,7 @@ class MapperPatternChecker(ast.NodeVisitor):
         if isinstance(node.func, ast.Name):
             name = node.func.id
             # Check if it looks like a DTO or data class
-            if any(
-                pattern in name for pattern in ["DTO", "Response", "Request", "Result"]
-            ):
+            if any(pattern in name for pattern in ["DTO", "Response", "Request", "Result"]):
                 return True
             # Check if it's an imported DTO
             if name in self.imported_dto_names:
@@ -187,9 +290,7 @@ class MapperPatternChecker(ast.NodeVisitor):
 
     def _is_logging_context(self, source_line: str) -> bool:
         """Check if line is a logging call (usually safe for dict)."""
-        return any(
-            method in source_line for method in ["log.", "logger.", "print(", "print{"]
-        )
+        return any(method in source_line for method in ["log.", "logger.", "print(", "print{"])
 
     def _get_source_line(self, lineno: int) -> str:
         """Get source line by line number (1-indexed)."""
@@ -239,8 +340,12 @@ def check_mapper_files(repo_root: Path) -> list[dict]:
         if "src/app/infrastructure/mappers" in str(file_path):
             continue
 
-        # Allow src/app/service/mappers.py (mappers stored here)
+        # Allow src/app/service/mappers.py (agent result mappers)
         if "src/app/service/mappers.py" in str(file_path):
+            continue
+
+        # Allow src/app/api/mappers/ (API DTO mappers: domain → response DTO)
+        if "src/app/api/mappers" in str(file_path):
             continue
 
         # Check if file looks like a mapper
@@ -373,7 +478,7 @@ def main() -> int:
                     file_paths.append(p)
                 else:
                     print(
-                        f"  {YELLOW}WARN{NC} Skipping {sys.argv[i+1]}: not a valid Python file",
+                        f"  {YELLOW}WARN{NC} Skipping {sys.argv[i + 1]}: not a valid Python file",
                         file=sys.stderr,
                     )
                 i += 2
@@ -395,7 +500,7 @@ def main() -> int:
                     )
                 else:
                     print(
-                        f"  {YELLOW}WARN{NC} Skipping {sys.argv[i+1]}: not a valid directory",
+                        f"  {YELLOW}WARN{NC} Skipping {sys.argv[i + 1]}: not a valid directory",
                         file=sys.stderr,
                     )
                 i += 2
@@ -411,9 +516,7 @@ def main() -> int:
         if api_dir.exists():
             file_paths.extend([f for f in api_dir.rglob("*.py") if not skip_file(f)])
         if service_dir.exists():
-            file_paths.extend(
-                [f for f in service_dir.rglob("*.py") if not skip_file(f)]
-            )
+            file_paths.extend([f for f in service_dir.rglob("*.py") if not skip_file(f)])
 
     if not file_paths:
         api_dir = repo_root / "src" / "app" / "api"
@@ -464,10 +567,13 @@ def main() -> int:
                 if len(violations) > 10:
                     print(f"    ... and {len(violations) - 10} more")
 
+        WARN_THRESHOLD = 15
+
         if failures:
-            print(
-                f"\n{RED}{len(failures)} mapper pattern violation(s) found (FAIL).{NC}"
-            )
+            print(f"\n{RED}{len(failures)} mapper pattern violation(s) found (FAIL).{NC}")
+            return 1
+        elif len(warnings) >= WARN_THRESHOLD:
+            print(f"\n{RED}{len(warnings)} warning(s) found — threshold of {WARN_THRESHOLD} exceeded.{NC}")
             return 1
         else:
             print(f"\n{YELLOW}{len(warnings)} warning(s) found (PASS).{NC}")

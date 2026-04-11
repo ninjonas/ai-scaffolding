@@ -7,6 +7,8 @@ class ChatRequestDTO(CamelModel):
     message: str
     conversation_id: str | None = None
     images: list[str] = Field(default_factory=list)
+    image_filenames: list[str] = Field(default_factory=list)
+    knowledge_file_ids: list[str] = Field(default_factory=list)
 
 
 class ToolCallDTO(CamelModel):

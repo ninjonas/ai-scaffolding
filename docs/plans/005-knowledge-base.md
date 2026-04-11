@@ -61,22 +61,22 @@ src/web/src/
 
 ## Implementation Phases
 
-### Phase 1: Domain and persistence `Not Started`
+### Phase 1: Domain and persistence `Done`
 
-- [ ] Create `KnowledgeFile` entity with fields: `id`, `name`, `description`, `tags`, `content`, `file_type`, `scope` (project | conversation), `conversation_id` (nullable), `created_at`, `updated_at`.
-- [ ] Create `KnowledgeFileRepository` protocol in `domain/repositories/`.
-- [ ] Create `KnowledgeFileModel` SQLAlchemy model. Tags stored as JSON array in a `tags_json` column (same pattern as `images_json` on `MessageModel`).
-- [ ] Create SQLAlchemy repository implementation.
-- [ ] Create data mapper: `KnowledgeFileModel` \<-> `KnowledgeFile` entity.
-- [ ] Wire into database init (table creation).
+- [x] Create `KnowledgeFile` entity with fields: `id`, `name`, `description`, `tags`, `content`, `file_type`, `scope` (project | conversation), `conversation_id` (nullable), `created_at`, `updated_at`.
+- [x] Create `KnowledgeFileRepository` protocol in `domain/repositories/`.
+- [x] Create `KnowledgeFileModel` SQLAlchemy model. Tags stored as JSON array in a `tags_json` column (same pattern as `images_json` on `MessageModel`).
+- [x] Create SQLAlchemy repository implementation.
+- [x] Create data mapper: `KnowledgeFileModel` \<-> `KnowledgeFile` entity.
+- [x] Wire into database init (table creation).
 
-### Phase 2: Frontmatter generation service `Not Started`
+### Phase 2: Frontmatter generation service `Done`
 
-- [ ] Create `KnowledgeService` in `src/app/service/knowledge.py`.
-- [ ] Implement `upload(filename, content, scope, conversation_id?)`: detect file type, auto-generate frontmatter (name from filename, description from first meaningful lines, tags from content heuristics), store via repository.
-- [ ] Implement `update(id, name?, description?, tags?, content?)` for editing.
-- [ ] Implement `delete(id)` and `list(scope?, conversation_id?)`.
-- [ ] Implement `get_catalog(scope?, conversation_id?)` returning frontmatter-only list.
+- [x] Create `KnowledgeService` in `src/app/service/knowledge.py`.
+- [x] Implement `upload(filename, content, scope, conversation_id?)`: detect file type, auto-generate frontmatter (name from filename, description from first meaningful lines, tags from content heuristics), store via repository.
+- [x] Implement `update(id, name?, description?, tags?, content?)` for editing.
+- [x] Implement `delete(id)` and `list(scope?, conversation_id?)`.
+- [x] Implement `get_catalog(scope?, conversation_id?)` returning frontmatter-only list.
 
 ### Phase 3: Agent integration (catalog + tool) `Not Started`
 
@@ -84,15 +84,15 @@ src/web/src/
 - [ ] Create `build_knowledge_catalog(catalog: list[dict]) -> str` utility for prompt injection.
 - [ ] Update `ChatbotState` to add `knowledge_catalog: str` field.
 - [ ] Update `invoke_llm` in chatbot nodes: append knowledge catalog to system prompt, register `read_knowledge_file` in `ALL_TOOLS`.
-- [ ] Update `AgentBroker.chat_response()` to accept and forward `knowledge_catalog`.
-- [ ] Update `ChatService.send_message()` to fetch catalog (project + conversation level) and pass through broker.
+- [x] Update `AgentBroker.chat_response()` to accept and forward `knowledge_catalog`.
+- [x] Update `ChatService.send_message()` to fetch catalog (project + conversation level) and pass through broker.
 
-### Phase 4: REST API `Not Started`
+### Phase 4: REST API `Done`
 
-- [ ] Create DTOs in `src/app/api/dto/knowledge.py`: `KnowledgeFileUploadDTO`, `KnowledgeFileUpdateDTO`, `KnowledgeFileResponseDTO`, `KnowledgeCatalogEntryDTO`.
-- [ ] Create routes in `src/app/api/routes/knowledge.py`: `POST /api/knowledge`, `GET /api/knowledge`, `GET /api/knowledge/{id}`, `PUT /api/knowledge/{id}`, `DELETE /api/knowledge/{id}`.
-- [ ] Create mapper in `src/app/infrastructure/mappers/knowledge_file.py`.
-- [ ] Wire `KnowledgeService` into DI container in `main.py`.
+- [x] Create DTOs in `src/app/api/dto/knowledge.py`: `KnowledgeFileUploadDTO`, `KnowledgeFileUpdateDTO`, `KnowledgeFileResponseDTO`, `KnowledgeCatalogEntryDTO`.
+- [x] Create routes in `src/app/api/routes/knowledge.py`: `POST /api/knowledge`, `GET /api/knowledge`, `GET /api/knowledge/{id}`, `PUT /api/knowledge/{id}`, `DELETE /api/knowledge/{id}`.
+- [x] Create mapper in `src/app/infrastructure/mappers/knowledge_file.py`.
+- [x] Wire `KnowledgeService` into DI container in `main.py`.
 
 ### Phase 5: Frontend, sidebar panel `Not Started`
 
@@ -184,6 +184,16 @@ Use Lucide SVG icons for visual differentiation, consistent with the existing pa
 - [ ] In the sidebar, conversation-scoped files show a subtle label: "Linked to this conversation."
 - [ ] No orphan cleanup needed since cascade delete handles it at the database level.
 
+### Phase 8: Upload UX — drag-and-drop without form `Not Started`
+
+The current drop zone opens an upload modal requiring the user to fill in filename, scope, and content manually. This contradicts the design intent: the backend already auto-generates all metadata via `knowledge_frontmatter.py`. The form should only appear for **edit**, not upload.
+
+- [ ] `handleDrop` in `KnowledgeSidebar.tsx`: read dropped files via `FileReader`, call `uploadKnowledgeFile()` directly with `file.name` as filename and file text as content. Do not open the editor modal.
+- [ ] Remove filename and content fields from the upload path in `KnowledgeFileEditor.tsx`. Form is edit-only.
+- [ ] Scope defaults to `project`. Expose as a simple toggle in the sidebar header (not inside the modal).
+- [ ] Upload feedback follows Phase 7 spec: inline spinner on drop, green checkmark on success, toast on error.
+- [ ] Multiple files dropped at once are uploaded sequentially; each shows individual feedback in the file list.
+
 ## Key Patterns
 
 ### KnowledgeFile entity
@@ -260,6 +270,7 @@ No new dependencies. Uses existing React, fetch API.
 | 5     | Phase 4    | frontend   | Needs REST API endpoints                                |
 | 6     | Phase 4    | frontend   | Needs REST API endpoints, can run parallel with Phase 5 |
 | 7     | None       | frontend   | UI/UX specs, runs parallel with Phases 5-6              |
+| 8     | Phase 5, 7 | frontend   | Upload UX fix, depends on sidebar and UX specs          |
 
 ### Sequencing constraints
 
@@ -287,3 +298,7 @@ No new dependencies. Uses existing React, fetch API.
 | ---------- | -------------- | ------------------------------------------------------------------------------------------------------- |
 | 2026-04-10 | Jonas + Claude | Initial draft                                                                                           |
 | 2026-04-10 | Claude         | Migrated to new plan format: added phase statuses, task checkboxes, agent execution strategy, changelog |
+| 2026-04-10 | Claude (api)   | Phase 2 complete: KnowledgeService + knowledge_frontmatter module implemented, all checks pass          |
+| 2026-04-10 | Claude (api)   | Phase 3 partial: AgentBroker.chat_response and ChatService.send_message updated with knowledge catalog  |
+| 2026-04-10 | Claude (api)   | Phase 4 complete: DTOs, routes, mapper DTO methods, DI wiring, and router registration implemented      |
+| 2026-04-10 | Jonas + Claude | Phase 8 added: upload UX fix — drop zone fires directly, no form for upload, edit-only modal            |

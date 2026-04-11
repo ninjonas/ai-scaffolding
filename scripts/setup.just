@@ -1,7 +1,7 @@
 set working-directory := '..'
 set quiet
 
-all: dirs brew python node git-hooks claude-cli claude-plugins
+all: dirs brew python node git-hooks claude-cli claude-plugins claude-statusbar
     @echo ""
     @echo "✅ Setup complete."
 
@@ -71,6 +71,34 @@ claude-cli:
         echo "🤖 Installing CLI..."
         curl -fsSL https://claude.ai/install.sh | bash
         echo "🤖 CLI installed."
+    fi
+
+# Install custom Claude Code status bar into ~/.claude/settings.json
+claude-statusbar:
+    #!/bin/bash
+    set -euo pipefail
+    echo ""
+    echo "── Claude Code Status Bar ──"
+    SCRIPT_SRC="$(pwd)/.claude/status-line.sh"
+    SCRIPT_DEST="$HOME/.claude/status-line.sh"
+    SETTINGS="$HOME/.claude/settings.json"
+
+    # Copy script and make executable
+    cp "$SCRIPT_SRC" "$SCRIPT_DEST"
+    chmod +x "$SCRIPT_DEST"
+
+    # Ensure ~/.claude/settings.json exists
+    mkdir -p "$(dirname "$SETTINGS")"
+    [ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
+
+    # Check if already configured to this script
+    current=$(jq -r '.statusCommand // empty' "$SETTINGS")
+    if [ "$current" = "$SCRIPT_DEST" ]; then
+        echo "📊 Status bar already configured, skipping."
+    else
+        tmp=$(mktemp)
+        jq --arg cmd "$SCRIPT_DEST" '.statusCommand = $cmd' "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
+        echo "📊 Status bar installed → $SCRIPT_DEST"
     fi
 
 # Install Claude Code plugins from .claude/settings.json (skips already-installed)

@@ -275,9 +275,15 @@ if [[ -n "$output" ]]; then
     echo "$output"
 fi
 
+WARN_THRESHOLD=15
+
 if (( errors > 0 )); then
     echo ""
     echo -e "${RED}${errors} error(s) and ${warnings} warning(s) found.${NC}"
+    exit 1
+elif (( warnings >= WARN_THRESHOLD )); then
+    echo ""
+    echo -e "${RED}${warnings} warning(s) found — threshold of ${WARN_THRESHOLD} exceeded.${NC}"
     exit 1
 elif (( warnings > 0 )); then
     echo ""

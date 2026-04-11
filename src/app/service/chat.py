@@ -1,53 +1,89 @@
+import asyncio
 import time
 
 import structlog
 
 from app.agents.orchestrator import AgentBroker
+from app.agents.tools.image import optimize_images_b64
+from app.agents.tools.knowledge import build_knowledge_catalog
 from app.domain.entities.conversation import Conversation
+from app.domain.entities.knowledge_file import SCOPE_CONVERSATION, SCOPE_PROJECT
 from app.domain.entities.message import Message, MessageRole
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
+from app.service.knowledge import KnowledgeService
 
 log = structlog.get_logger()
 
 
 class ChatService:
-    def __init__(self, broker: AgentBroker, unit_of_work: SQLAlchemyUnitOfWork) -> None:
+    def __init__(
+        self,
+        broker: AgentBroker,
+        unit_of_work: SQLAlchemyUnitOfWork,
+        knowledge_service: KnowledgeService,
+    ) -> None:
         self._broker = broker
         self._uow = unit_of_work
+        self._knowledge_service = knowledge_service
 
     async def send_message(
         self,
         content: str,
         conversation_id: str | None = None,
         images: list[str] | None = None,
+        image_filenames: list[str] | None = None,
+        knowledge_file_ids: list[str] | None = None,
     ) -> Message:
         log.info(
             "send_message_start",
             conversation_id=conversation_id,
             has_images=bool(images),
             content_length=len(content),
+            knowledge_file_count=len(knowledge_file_ids or []),
         )
         start = time.monotonic()  # timing: operation-level
+
+        optimized = optimize_images_b64(images) if images else []
 
         async with self._uow as uow:
             conversation = await self._get_or_create(uow, conversation_id)
 
+            project_catalog = await self._knowledge_service.get_catalog(scope=SCOPE_PROJECT)
+            conversation_catalog = await self._knowledge_service.get_catalog(
+                scope=SCOPE_CONVERSATION,
+                conversation_id=conversation.id,
+            )
+            catalog_entries = project_catalog + conversation_catalog
+            knowledge_catalog = build_knowledge_catalog(catalog_entries)
+            log.info(
+                "knowledge_catalog_built",
+                conversation_id=conversation.id,
+                project_count=len(project_catalog),
+                conversation_count=len(conversation_catalog),
+                catalog_length=len(knowledge_catalog),
+            )
+
             user_message = Message(
                 content=content,
                 role=MessageRole.USER,
-                images=images or [],
+                images=optimized,
             )
             conversation.add_message(user_message)
 
             response = await self._broker.chat_response(
                 content,
-                images or [],
+                optimized,
+                knowledge_catalog=knowledge_catalog,
                 conversation_id=conversation.id,
                 message_count=len(conversation.messages),
             )
 
+            raw_content = response["content"]
+            if not raw_content:
+                log.warning("chat_empty_response", conversation_id=conversation.id)
+                raw_content = "Sorry, I didn't get a response. Please try again."
             assistant_message = Message(
-                content=response["content"],
+                content=raw_content,
                 role=MessageRole.ASSISTANT,
                 tool_calls=response.get("tool_calls", []),
             )
@@ -55,6 +91,23 @@ class ChatService:
 
             await uow.conversations.save(conversation)
             await uow.commit()
+
+        uploaded_files = []
+        filenames = image_filenames or []
+        for i, img_b64 in enumerate(user_message.images):
+            filename = filenames[i] if i < len(filenames) else f"image_{i + 1}.jpg"
+            kf = await self._knowledge_service.upload(
+                filename=filename,
+                content=img_b64,
+                scope=SCOPE_CONVERSATION,
+                conversation_id=conversation.id,
+            )
+            uploaded_files.append(kf)
+
+        _enrich_tasks = [
+            asyncio.create_task(self._knowledge_service.enrich_metadata(kf.id))
+            for kf in uploaded_files
+        ]
 
         duration = time.monotonic() - start  # timing: operation-level
         log.info(

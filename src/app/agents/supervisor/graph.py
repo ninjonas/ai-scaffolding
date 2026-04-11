@@ -11,10 +11,10 @@ from app.agents.supervisor.state import SupervisorState
 log = structlog.get_logger()
 
 
-def create_supervisor_graph(llm: ChatOpenAI) -> StateGraph:
+def create_supervisor_graph(llm: ChatOpenAI, extra_tools: list | None = None) -> StateGraph:
     log.info("creating_supervisor_graph")
 
-    chatbot = create_chatbot_graph(llm)
+    chatbot = create_chatbot_graph(llm, extra_tools=extra_tools)
     researcher = create_researcher_graph(llm)
 
     async def router_node(state: SupervisorState) -> dict:
@@ -27,6 +27,7 @@ def create_supervisor_graph(llm: ChatOpenAI) -> StateGraph:
                 "messages": state["messages"],
                 "images": state.get("images", []),
                 "skill_context": "",
+                "knowledge_catalog": state.get("knowledge_catalog", ""),
             }
         )
         return {"messages": result["messages"]}

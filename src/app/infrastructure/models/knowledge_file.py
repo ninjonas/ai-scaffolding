@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.infrastructure.models import Base
+
+EMPTY_JSON_ARRAY = "[]"
+
+
+class KnowledgeFileModel(Base):
+    __tablename__ = "knowledge_files"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+    filename: Mapped[str] = mapped_column(String, default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    content: Mapped[str] = mapped_column(Text, default="")
+    file_type: Mapped[str] = mapped_column(String)
+    scope: Mapped[str] = mapped_column(String)
+    tags_json: Mapped[str] = mapped_column(Text, default=EMPTY_JSON_ARRAY)
+    enriched: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="0"
+    )
+    conversation_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    @property
+    def tags(self) -> list[str]:
+        return json.loads(self.tags_json)
+
+    @tags.setter
+    def tags(self, value: list[str]) -> None:
+        self.tags_json = json.dumps(value)

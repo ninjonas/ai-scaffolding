@@ -116,6 +116,9 @@ bsc:
 setup:
     just -f scripts/setup.just all
 
+setup-statusbar:
+    just -f scripts/setup.just claude-statusbar
+
 # ── Fork ──────────────────────────────────────
 fork *args:
     just -f scripts/fork.just fork {{args}}

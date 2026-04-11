@@ -1,13 +1,14 @@
 .chat-container {
   display: flex;
   flex-direction: column;
-  min-height: 100svh;
+  height: 100%;
   flex: 1;
   max-width: 720px;
   margin: 0 auto;
   width: 100%;
   text-align: left;
   font-family: var(--sans);
+  overflow: hidden;
 }
 
 .chat-header {
@@ -19,21 +20,37 @@
   gap: 10px;
 }
 
-.chat-header::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex-shrink: 0;
-}
-
 .chat-header h1 {
+  flex: 1;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.2px;
   color: var(--text-h);
   margin: 0;
+}
+
+.new-chat-btn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.new-chat-btn:hover:not(:disabled) {
+  color: var(--text-h);
+  border-color: var(--text-muted);
+}
+
+.new-chat-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .chat-messages {
@@ -51,22 +68,34 @@
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: 13px;
-  letter-spacing: 0.3px;
-  opacity: 0.4;
-  color: var(--text);
+  gap: 8px;
   pointer-events: none;
 }
 
+.chat-empty-greeting {
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--text-h);
+  letter-spacing: -0.5px;
+}
+
+.chat-empty-hint {
+  font-size: 14px;
+  color: var(--text);
+  opacity: 0.6;
+}
+
 .chat-error {
-  border-left: 2px solid #ef4444;
-  padding: 12px 16px 12px 30px;
+  padding: 12px 16px;
   color: #fca5a5;
   font-size: 14px;
   background: rgba(239, 68, 68, 0.08);
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
 }
 
 .message {
@@ -77,8 +106,9 @@
 .message-user {
   align-self: flex-end;
   max-width: 72%;
-  background: var(--surface);
-  border-radius: 12px 12px 2px 12px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(167, 139, 250, 0.12);
+  border-radius: 18px 18px 4px 18px;
   padding: 12px 16px;
 }
 
@@ -90,27 +120,20 @@
 }
 
 .message-role {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--text);
-  margin-bottom: 8px;
-  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  margin-bottom: 6px;
+  font-family: var(--sans);
 }
 
 .message-assistant .message-role {
   display: inline-block;
-  background: var(--muted);
-  color: var(--text);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-family: var(--mono);
+  color: var(--accent);
+  font-size: 12px;
+  font-family: var(--sans);
   font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .message-loading .message-role {
@@ -137,9 +160,9 @@
 .message-image {
   max-width: 240px;
   max-height: 180px;
-  border-radius: 8px;
+  border-radius: 12px;
   object-fit: cover;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .message-content {
@@ -155,25 +178,26 @@
 }
 
 .typing-dots span {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--accent);
-  animation: typing-dot 0.3s ease-in-out infinite;
+  opacity: 0.5;
+  animation: typing-dot 1.2s ease-in-out infinite;
 }
 
 .typing-dots span:nth-child(2) {
-  animation-delay: 0.1s;
+  animation-delay: 0.2s;
 }
 
 .typing-dots span:nth-child(3) {
-  animation-delay: 0.2s;
+  animation-delay: 0.4s;
 }
 
 @keyframes typing-dot {
   0%,
   100% {
-    opacity: 0;
+    opacity: 0.3;
   }
   50% {
     opacity: 1;
@@ -182,26 +206,26 @@
 
 .tool-calls {
   margin-top: 12px;
-  padding: 12px;
-  background: var(--muted);
-  border-radius: 6px;
+  padding: 10px 12px;
+  background: var(--accent-soft);
+  border-radius: 10px;
   font-family: var(--mono);
   font-size: 12px;
 }
 
 .tool-calls-label {
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 6px;
   color: var(--text);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 10px;
+  font-size: 11px;
+  font-family: var(--sans);
 }
 
 .tool-call code {
   background: transparent;
-  color: var(--accent);
+  color: var(--text);
   padding: 0;
+  font-size: 12px;
 }
 
 .chat-input-container {
@@ -216,12 +240,14 @@
   align-items: center;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px 8px;
+  border-radius: 16px;
+  padding: 8px 10px;
+  transition: border-color 0.2s;
 }
 
 .chat-input-row:focus-within {
-  border-color: var(--accent);
+  border-color: rgba(167, 139, 250, 0.3);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
   outline: none;
 }
 
@@ -265,20 +291,31 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
+.attach-btn.active {
+  color: #fff;
+  background: var(--accent);
+}
+
 .send-btn {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: none;
   background: var(--accent);
-  color: #000;
-  border-radius: 7px;
+  color: #fff;
+  border-radius: 50%;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition:
+    opacity 0.2s,
+    transform 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.send-btn:hover:not(:disabled) {
+  transform: scale(1.05);
 }
 
 .send-btn:disabled {
@@ -328,4 +365,1042 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.chat-layout {
+  display: flex;
+  flex-direction: row;
+  height: 100svh;
+  overflow: hidden;
+  width: 100%;
+}
+
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.knowledge-toggle-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 0.15s,
+    background 0.15s;
+  flex-shrink: 0;
+}
+
+.knowledge-toggle-btn:hover {
+  color: var(--text-h);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.knowledge-toggle-btn.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* Knowledge Sidebar */
+
+.knowledge-sidebar {
+  position: fixed;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  height: 100svh;
+  border-left: 1px solid var(--border);
+  background: var(--bg);
+  padding: 16px 16px 0;
+  gap: 12px;
+  overflow: hidden;
+  z-index: 50;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.3);
+  animation: sidebar-enter 0.22s ease-out;
+}
+
+@keyframes sidebar-enter {
+  from {
+    transform: translateX(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.knowledge-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.knowledge-sidebar-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0;
+}
+
+.knowledge-close-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.knowledge-close-btn:hover {
+  color: var(--text-h);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.knowledge-tabs {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.knowledge-tab {
+  flex: 1;
+  padding: 6px 0;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--sans);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s;
+}
+
+.knowledge-tab.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: rgba(167, 139, 250, 0.2);
+}
+
+.knowledge-drop-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1.5px dashed var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  animation: drop-zone-breathe 3s ease-in-out infinite;
+  min-height: 200px;
+  padding: 32px 16px;
+}
+
+.knowledge-drop-zone:hover,
+.knowledge-drop-zone:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  outline: none;
+  animation: none;
+}
+
+.knowledge-drop-zone.dragging {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  animation: drop-zone-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes drop-zone-breathe {
+  0%,
+  100% {
+    border-color: var(--border);
+  }
+  50% {
+    border-color: rgba(167, 139, 250, 0.35);
+  }
+}
+
+@keyframes drop-zone-pulse {
+  0%,
+  100% {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+  }
+  50% {
+    background: rgba(167, 139, 250, 0.12);
+    border-color: rgba(167, 139, 250, 0.7);
+  }
+}
+
+.knowledge-drop-icon {
+  color: var(--accent);
+  opacity: 0.6;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+
+.knowledge-drop-zone:hover .knowledge-drop-icon,
+.knowledge-drop-zone.dragging .knowledge-drop-icon {
+  opacity: 1;
+  transform: translateY(-3px);
+}
+
+.knowledge-drop-headline {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0;
+}
+
+.knowledge-drop-sub {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.5;
+  margin: 0;
+}
+
+.knowledge-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-end;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--sans);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s;
+}
+
+.knowledge-add-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.knowledge-file-list.drop-target {
+  outline: 1.5px dashed var(--accent);
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+
+.knowledge-error {
+  padding: 8px 12px;
+  color: #fca5a5;
+  font-size: 13px;
+  background: rgba(239, 68, 68, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.knowledge-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 16px;
+}
+
+.knowledge-skeleton {
+  height: 52px;
+  border-radius: 10px;
+  background: var(--surface);
+  animation: role-pulse 1.2s ease-in-out infinite;
+}
+
+.knowledge-empty {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.6;
+  text-align: center;
+  padding: 24px 0;
+  margin: 0;
+}
+
+.knowledge-file-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.knowledge-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.knowledge-file-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-h);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.knowledge-file-badge {
+  font-size: 10px;
+  font-family: var(--mono);
+  padding: 1px 5px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.knowledge-enriching-badge {
+  font-size: 0.75rem;
+  color: var(--text);
+  opacity: 0.5;
+  display: inline;
+}
+
+.knowledge-file-desc {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.7;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.knowledge-file-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.knowledge-tag {
+  font-size: 11px;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.knowledge-delete-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: all 0.15s;
+}
+
+.knowledge-delete-btn:hover {
+  opacity: 1;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* Knowledge Editor Modal */
+
+.knowledge-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.knowledge-editor-modal {
+  width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.knowledge-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 20px 20px 0;
+}
+
+.knowledge-editor-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0;
+}
+
+.knowledge-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+.knowledge-input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-h);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.knowledge-input:focus {
+  border-color: rgba(167, 139, 250, 0.3);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
+}
+
+.knowledge-description-textarea {
+  resize: vertical;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.knowledge-collapsible {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.knowledge-collapsible-summary {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.knowledge-collapsible-summary::-webkit-details-marker {
+  display: none;
+}
+
+.knowledge-collapsible-summary::before {
+  content: '▶';
+  font-size: 9px;
+  color: var(--text);
+  opacity: 0.5;
+  transition: transform 0.15s ease;
+}
+
+.knowledge-collapsible[open] .knowledge-collapsible-summary::before {
+  transform: rotate(90deg);
+}
+
+.knowledge-collapsible[open] .knowledge-collapsible-summary {
+  margin-bottom: 10px;
+}
+
+.knowledge-collapsible-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.knowledge-input-readonly {
+  opacity: 0.55;
+  cursor: default;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.knowledge-textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-h);
+  font-size: 13px;
+  font-family: var(--mono);
+  outline: none;
+  resize: vertical;
+}
+
+.knowledge-textarea:focus {
+  border-color: rgba(167, 139, 250, 0.3);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
+}
+
+.knowledge-content-preview {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-h);
+  font-size: 13px;
+  font-family: var(--mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+}
+
+.knowledge-content-empty {
+  color: var(--text-muted, #666);
+  font-style: italic;
+}
+
+.knowledge-submit-btn {
+  padding: 10px 16px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-family: var(--sans);
+  font-weight: 500;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.knowledge-submit-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.knowledge-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Knowledge editor — delete section */
+
+.knowledge-editor-delete-section {
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.knowledge-editor-delete-btn {
+  width: 100%;
+  padding: 9px 16px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: transparent;
+  color: rgba(239, 68, 68, 0.7);
+  font-size: 13px;
+  font-family: var(--sans);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.knowledge-editor-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.knowledge-editor-delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.knowledge-editor-delete-warning {
+  font-size: 12px;
+  color: rgba(239, 68, 68, 0.8);
+  margin: 0;
+}
+
+.knowledge-editor-delete-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Knowledge sidebar — additional styles */
+
+.knowledge-list-header {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.knowledge-file-row {
+  cursor: pointer;
+  outline: none;
+}
+
+.knowledge-file-row:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.knowledge-file-icon {
+  flex-shrink: 0;
+  color: var(--text);
+  margin-top: 1px;
+}
+
+.knowledge-file-icon svg[data-json],
+.knowledge-file-icon svg[data-yml] {
+  color: var(--accent);
+}
+
+.knowledge-file-linked {
+  font-size: 11px;
+  color: var(--accent);
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+.knowledge-upload-check {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  animation: knowledge-check-flash 0.3s ease-out forwards;
+}
+
+@keyframes knowledge-check-flash {
+  0% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.knowledge-upload-spinner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+@keyframes knowledge-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.knowledge-file-row.adding {
+  animation: knowledge-slide-in 0.2s ease-out;
+}
+
+.knowledge-file-row.removing {
+  animation: knowledge-slide-out 0.15s ease-in forwards;
+  pointer-events: none;
+}
+
+.knowledge-file-row.upload-success {
+  border-color: rgba(74, 222, 128, 0.35);
+}
+
+@keyframes knowledge-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes knowledge-slide-out {
+  from {
+    opacity: 1;
+    max-height: 200px;
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-file-row.adding,
+  .knowledge-file-row.removing,
+  .knowledge-upload-check,
+  .knowledge-sidebar,
+  .knowledge-drop-zone {
+    animation: none;
+    transition: opacity 0.01s;
+  }
+}
+
+.knowledge-tag-more {
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--border);
+  font-family: inherit;
+}
+
+.knowledge-tag-more:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
+.knowledge-delete-confirm {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-h);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.knowledge-delete-confirm-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.knowledge-btn-cancel {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--sans);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.knowledge-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.knowledge-btn-danger {
+  padding: 4px 10px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+  color: #fca5a5;
+  font-size: 12px;
+  font-family: var(--sans);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.knowledge-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.16);
+}
+
+.knowledge-toasts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.knowledge-toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #fca5a5;
+  animation: knowledge-toast-in 0.2s ease-out;
+}
+
+@keyframes knowledge-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.knowledge-toast-retry {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--sans);
+}
+
+/* Knowledge Editor — slide-over panel */
+
+.knowledge-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+  animation: knowledge-scrim-in 0.15s ease-out;
+}
+
+@keyframes knowledge-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.knowledge-editor-panel {
+  width: 420px;
+  max-width: 100vw;
+  height: 100svh;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  animation: knowledge-panel-in 0.2s ease-out;
+  overflow: hidden;
+}
+
+@keyframes knowledge-panel-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.knowledge-editor-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  padding-top: 0;
+}
+
+.knowledge-editor-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+/* Tags chip editor */
+
+.knowledge-tags-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  min-height: 38px;
+}
+
+.knowledge-tags-editor:focus-within {
+  border-color: rgba(167, 139, 250, 0.3);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
+}
+
+.knowledge-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-radius: 4px;
+}
+
+.knowledge-tag-remove {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 1px;
+  opacity: 0.7;
+}
+
+.knowledge-tag-remove:hover {
+  opacity: 1;
+}
+
+.knowledge-tag-input {
+  flex: 1;
+  min-width: 80px;
+  border: none;
+  background: transparent;
+  color: var(--text-h);
+  font-size: 13px;
+  font-family: var(--sans);
+  outline: none;
+}
+
+.knowledge-tag-input::placeholder {
+  color: var(--text);
+  opacity: 0.4;
+}
+
+.knowledge-textarea-mono {
+  font-family: var(--mono);
+}
+
+/* Also fix tag pill colors in sidebar per spec */
+.knowledge-tag {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* @ mention dropdown animation */
+@keyframes mentionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes mentionFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* Attachments preview row (images + knowledge chips) */
+.attachments-preview {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Knowledge chip — interactive (in input area) */
+.knowledge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px 4px 6px;
+  border-radius: 6px;
+  background: rgba(167, 139, 250, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  color: var(--accent);
+  font-size: 12px;
+  animation: chipAttach 150ms ease;
+}
+
+.knowledge-chip button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+}
+
+.knowledge-chip button:hover {
+  opacity: 1;
+}
+
+/* Knowledge chip — static (in message bubble) */
+.knowledge-chip--static {
+  animation: none;
+  cursor: default;
+  font-size: 11px;
+  padding: 2px 7px;
+}
+
+.message-knowledge-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+@keyframes chipAttach {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes chipAttach {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }

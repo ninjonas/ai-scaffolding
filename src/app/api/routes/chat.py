@@ -39,6 +39,8 @@ async def send_message(
         content=request.message,
         conversation_id=request.conversation_id,
         images=request.images,
+        image_filenames=request.image_filenames,
+        knowledge_file_ids=request.knowledge_file_ids,
     )
 
     dto = ChatMapper.to_response_dto(

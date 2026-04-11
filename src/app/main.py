@@ -12,6 +12,7 @@ from app.api.router import api_router
 from app.infrastructure.database import create_engine, create_session_factory, init_database
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from app.service.chat import ChatService
+from app.service.knowledge import KnowledgeService
 from app.shared.config import Settings
 from app.shared.di import Container
 from app.shared.llm import create_llm
@@ -39,19 +40,46 @@ async def lifespan(app: FastAPI):
     llm = create_llm(settings)
 
     from app.agents.supervisor.graph import create_supervisor_graph
+    from app.agents.tools.knowledge import make_read_knowledge_file_tool
+    from app.infrastructure.repositories.knowledge_file import SQLKnowledgeFileRepository
 
-    agent_graph = create_supervisor_graph(llm)
+    def knowledge_uow_factory() -> SQLAlchemyUnitOfWork:
+        return SQLAlchemyUnitOfWork(session_factory)
+
+    def make_knowledge_repo() -> SQLKnowledgeFileRepository:
+        return SQLKnowledgeFileRepository(session_factory())
+
+    read_knowledge_file = make_read_knowledge_file_tool(make_knowledge_repo)
+    agent_graph = create_supervisor_graph(llm, extra_tools=[read_knowledge_file])
     orchestrator = AgentOrchestrator(agent_graph)
     broker = AgentBroker(orchestrator)
     uow = SQLAlchemyUnitOfWork(session_factory)
-    chat_service = ChatService(broker=broker, unit_of_work=uow)
+    knowledge_service = KnowledgeService(uow_factory=knowledge_uow_factory, llm=llm)
+    chat_service = ChatService(
+        broker=broker, unit_of_work=uow, knowledge_service=knowledge_service
+    )
 
     _container = Container(settings=settings)
     _container._register("chat_service", chat_service)
+    _container._register("knowledge_service", knowledge_service)
+
+    import asyncio
 
     import app.shared.di as di_module
 
     di_module._container = _container
+
+    async with knowledge_uow_factory() as uow:
+        all_files = await uow.knowledge.list(scope=None, conversation_id=None)
+        unenriched = [f for f in all_files if not f.enriched]
+
+    backfill_tasks: set[asyncio.Task] = set()
+    if unenriched:
+        log.info("knowledge_backfill_start", count=len(unenriched))
+        for f in unenriched:
+            task = asyncio.create_task(knowledge_service.enrich_metadata(f.id))
+            backfill_tasks.add(task)
+            task.add_done_callback(backfill_tasks.discard)
 
     log.info("app_started")
     yield

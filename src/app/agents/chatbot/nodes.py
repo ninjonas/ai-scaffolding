@@ -15,16 +15,16 @@ from app.agents.constants import (
     PROMPTS_DIR,
     RULES_DIR,
 )
-from app.agents.skills.analyze_image.tools import describe_image
 from app.agents.skills.calculator.tools import calculate
 from app.agents.skills.file_ops.tools import list_directory, read_file
 from app.agents.skills.loader import build_skill_catalog, load_skill, read_skill_file
 from app.agents.skills.web_search.tools import search_web
+from app.agents.tools.image import BASE64_JPEG_PREFIX
+from app.shared.field_keys import CONTENT_TYPE_IMAGE_URL, CONTENT_TYPE_TEXT
 
 log = structlog.get_logger()
 
 ALL_TOOLS = [
-    describe_image,
     search_web,
     read_file,
     list_directory,
@@ -48,12 +48,17 @@ def _build_system_prompt() -> str:
     return "\n\n".join([system, persona, *rules, skills_section, output_fmt])
 
 
-async def invoke_llm(state: ChatbotState, llm) -> dict:
+async def invoke_llm(state: ChatbotState, llm, extra_tools: list | None = None) -> dict:
     log.info("chatbot_invoke_llm", message_count=len(state["messages"]))
 
     system_prompt = _build_system_prompt()
     if state.get("skill_context"):
         system_prompt += f"\n\n## Loaded Skill Context\n\n{state['skill_context']}"
+
+    knowledge_catalog = state.get("knowledge_catalog") or ""
+    if knowledge_catalog:
+        system_prompt += f"\n\n{knowledge_catalog}"
+        log.info("chatbot_knowledge_catalog_injected", length=len(knowledge_catalog))
 
     chat_messages = list(state["messages"])
     images = state.get("images") or []
@@ -69,18 +74,19 @@ async def invoke_llm(state: ChatbotState, llm) -> dict:
         )
         if last_human is not None:
             text = chat_messages[last_human].content or ""
-            content_parts = [{"type": "text", "text": text}]
+            content_parts = [{"type": CONTENT_TYPE_TEXT, "text": text}]
             for img in images:
                 content_parts.append(
                     {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{img}"},
+                        "type": CONTENT_TYPE_IMAGE_URL,
+                        "image_url": {"url": f"{BASE64_JPEG_PREFIX}{img}"},
                     }
                 )
             chat_messages[last_human] = HumanMessage(content=content_parts)
 
+    tools = ALL_TOOLS + (extra_tools or [])
     messages = [SystemMessage(content=system_prompt), *chat_messages]
-    llm_with_tools = llm.bind_tools(ALL_TOOLS)
+    llm_with_tools = llm.bind_tools(tools)
     start = time.monotonic()
     response = await llm_with_tools.ainvoke(messages)
 

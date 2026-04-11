@@ -12,14 +12,14 @@ describe('App', () => {
 
   it('shows empty state message', () => {
     render(<App />);
-    expect(screen.getByText('Send a message to start a conversation.')).toBeInTheDocument();
+    expect(screen.getByText('Hi there, how can I help?')).toBeInTheDocument();
   });
 });
 
 describe('ChatInput', () => {
   it('renders textarea and send button', () => {
     render(<ChatInput onSend={vi.fn()} disabled={false} />);
-    expect(screen.getByRole('textbox', { name: /message/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /message/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
   });
 
@@ -31,10 +31,10 @@ describe('ChatInput', () => {
   it('calls onSend with message text on submit', () => {
     const onSend = vi.fn();
     render(<ChatInput onSend={onSend} disabled={false} />);
-    const textarea = screen.getByRole('textbox', { name: /message/i });
+    const textarea = screen.getByRole('combobox', { name: /message/i });
     fireEvent.change(textarea, { target: { value: 'Hello world' } });
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
-    expect(onSend).toHaveBeenCalledWith('Hello world', []);
+    expect(onSend).toHaveBeenCalledWith('Hello world', [], []);
   });
 });
 
