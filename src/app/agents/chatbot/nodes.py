@@ -58,7 +58,8 @@ async def invoke_llm(state: ChatbotState, llm, extra_tools: list | None = None) 
 
     chat_messages = list(state["messages"])
     images = state.get("images") or []
-    if images:
+    is_first_pass = not any(isinstance(m, AIMessage) for m in chat_messages)
+    if images and is_first_pass:
         log.info("chatbot_attaching_images", count=len(images))
         last_human = next(
             (

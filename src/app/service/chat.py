@@ -8,6 +8,7 @@ from app.agents.tools.image import optimize_images_b64
 from app.domain.entities.conversation import Conversation
 from app.domain.entities.knowledge_file import SCOPE_CONVERSATION
 from app.domain.entities.message import Message, MessageRole
+from app.infrastructure.mappers.message_index import MessageIndexMapper
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from app.infrastructure.vector.message_indexer import MessageIndexer
 from app.service.knowledge import KnowledgeService
@@ -90,19 +91,9 @@ class ChatService:
             await uow.commit()
 
         if self._message_indexer:
+            await self._message_indexer.index(**MessageIndexMapper.to_index_params(user_message))
             await self._message_indexer.index(
-                user_message.id,
-                content,
-                MessageRole.USER,
-                conversation.id,
-                user_message.created_at,
-            )
-            await self._message_indexer.index(
-                assistant_message.id,
-                raw_content,
-                MessageRole.ASSISTANT,
-                conversation.id,
-                assistant_message.created_at,
+                **MessageIndexMapper.to_index_params(assistant_message)
             )
 
         uploaded_files = []

@@ -51,9 +51,15 @@ async def lifespan(app: FastAPI):
     def knowledge_uow_factory() -> SQLAlchemyUnitOfWork:
         return SQLAlchemyUnitOfWork(session_factory)
 
-    from app.shared.checkpointer import get_checkpointer
+    import aiosqlite
+    from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
-    checkpointer = await get_checkpointer(settings)
+    checkpoint_db_path = settings.checkpoint_db_path
+    Path(checkpoint_db_path).parent.mkdir(parents=True, exist_ok=True)
+    log.info("checkpointer_init", db_path=checkpoint_db_path)
+    conn = await aiosqlite.connect(checkpoint_db_path)
+    checkpointer = AsyncSqliteSaver(conn)
+    log.info("checkpointer_ready", db_path=checkpoint_db_path)
 
     chroma_client = get_chroma_client(settings)
     knowledge_indexer = KnowledgeIndexer(chroma_client, settings)
@@ -81,6 +87,7 @@ async def lifespan(app: FastAPI):
     )
 
     _container = Container(settings=settings)
+    _container._register("checkpointer", checkpointer)
     _container._register("chat_service", chat_service)
     _container._register("knowledge_service", knowledge_service)
 

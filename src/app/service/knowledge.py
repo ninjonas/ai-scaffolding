@@ -33,10 +33,13 @@ class KnowledgeService:
         if self._indexer is None:
             return
         log.info("knowledge_index_start", file_id=file.id)
-        chunks = await self._indexer.index(
-            file.id, file.name, file.content, file.file_type, file.scope, file.conversation_id
-        )
-        log.info("knowledge_index_done", file_id=file.id, chunk_count=chunks)
+        try:
+            chunks = await self._indexer.index(
+                file.id, file.name, file.content, file.file_type, file.scope, file.conversation_id
+            )
+            log.info("knowledge_index_done", file_id=file.id, chunk_count=chunks)
+        except Exception as exc:
+            log.warning("knowledge_index_error", file_id=file.id, error=str(exc))
 
     async def upload(
         self,

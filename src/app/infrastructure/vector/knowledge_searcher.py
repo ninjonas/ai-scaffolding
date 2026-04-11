@@ -31,6 +31,7 @@ class KnowledgeSearcher:
         ef = OpenAIEmbeddingFunction(
             api_key=self._settings.llm_api_key,
             model_name=EMBEDDING_MODEL_DEFAULT,
+            api_base=self._settings.llm_base_url,
         )
         return self._client.get_or_create_collection(
             name=TABLE_KNOWLEDGE_FILES,

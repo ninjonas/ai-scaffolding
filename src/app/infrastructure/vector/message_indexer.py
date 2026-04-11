@@ -25,6 +25,7 @@ class MessageIndexer:
         ef = OpenAIEmbeddingFunction(
             api_key=self._settings.llm_api_key,
             model_name=EMBEDDING_MODEL_DEFAULT,
+            api_base=self._settings.llm_base_url,
         )
         return self._client.get_or_create_collection(
             name=CHROMA_COLLECTION_MESSAGES,
@@ -48,17 +49,20 @@ class MessageIndexer:
             conversation_id: ID of the conversation this message belongs to.
             created_at: ISO-formatted timestamp string.
         """
-        collection = self._get_collection()
-        collection.upsert(
-            ids=[message_id],
-            documents=[content],
-            metadatas=[
-                {
-                    "message_id": message_id,
-                    "conversation_id": conversation_id,
-                    "role": role,
-                    "created_at": created_at,
-                }
-            ],
-        )
-        log.info("message_indexed", message_id=message_id, conversation_id=conversation_id)
+        try:
+            collection = self._get_collection()
+            collection.upsert(
+                ids=[message_id],
+                documents=[content],
+                metadatas=[
+                    {
+                        "message_id": message_id,
+                        "conversation_id": conversation_id,
+                        "role": role,
+                        "created_at": created_at,
+                    }
+                ],
+            )
+            log.info("message_indexed", message_id=message_id, conversation_id=conversation_id)
+        except Exception as exc:
+            log.warning("message_index_error", message_id=message_id, error=str(exc))
