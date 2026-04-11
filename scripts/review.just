@@ -1,5 +1,9 @@
 set working-directory := '..'
 
+# Run full code review via Claude Code CLI (automated checks + Codex semantic pass)
+all:
+    claude -p "/code-review"
+
 # Run automated code-review checks against changed files
 code ref='main':
     #!/usr/bin/env bash

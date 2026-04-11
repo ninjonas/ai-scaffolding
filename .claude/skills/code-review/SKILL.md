@@ -13,17 +13,10 @@ pass (architecture violations scripts can't detect).
 
 ## Step 1 — Determine scope
 
-Check the current branch:
+Get the current branch and its merge-base with main:
 
 ```bash
-git branch --show-current
-```
-
-### On a feature branch (not `main` / `master`)
-
-Use the merge-base with main as the ref:
-
-```bash
+branch=$(git branch --show-current)
 ref=$(git merge-base main HEAD)
 ```
 
@@ -39,19 +32,6 @@ Deduplicate and split into:
 - **Python files** — `*.py` under `src/` (exclude `scripts/`)
 - **TypeScript/TSX files** — `*.ts`, `*.tsx`
 
-### On `main`
-
-Ask the user for a ref:
-
-```
-Which commit should I review from?
-
-A) A specific commit hash or ref (e.g. abc1234, HEAD~5)
-B) I'll paste the hash now
-```
-
-Then use that ref as the base.
-
 ---
 
 ## Step 2 — Script pass (automated checks)
@@ -59,7 +39,7 @@ Then use that ref as the base.
 Run the automated checks against changed files only:
 
 ```bash
-just code-review "$ref"
+just -f scripts/review.just code "$ref"
 ```
 
 This runs lint (Python + TypeScript), line limits, DI checks, literal strings, mapper patterns,

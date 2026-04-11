@@ -90,8 +90,8 @@ check-service-patterns *args:
     just -f scripts/check.just service-patterns {{args}}
 
 # ── Code Review ───────────────────────────────────
-code-review *args:
-    just -f scripts/review.just code {{args}}
+code-review:
+    just -f scripts/review.just all
 
 # ── Code generation ───────────────────────────────
 gen-types:

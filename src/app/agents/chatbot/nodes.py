@@ -60,18 +60,23 @@ async def invoke_llm(state: ChatbotState, llm) -> dict:
     if images:
         log.info("chatbot_attaching_images", count=len(images))
         last_human = next(
-            (i for i in range(len(chat_messages) - 1, -1, -1)
-             if isinstance(chat_messages[i], HumanMessage)),
+            (
+                i
+                for i in range(len(chat_messages) - 1, -1, -1)
+                if isinstance(chat_messages[i], HumanMessage)
+            ),
             None,
         )
         if last_human is not None:
             text = chat_messages[last_human].content or ""
             content_parts = [{"type": "text", "text": text}]
             for img in images:
-                content_parts.append({
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{img}"},
-                })
+                content_parts.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{img}"},
+                    }
+                )
             chat_messages[last_human] = HumanMessage(content=content_parts)
 
     messages = [SystemMessage(content=system_prompt), *chat_messages]
