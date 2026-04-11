@@ -19,14 +19,16 @@ MIN_RELEVANCE_SCORE = 0.3
 MIN_RELEVANCE_SCORE_CONVERSATION = 0.15
 
 
-def build_search_filter(scope: str, conversation_id: str | None = None) -> dict:
+def build_search_filter(scope: str, conversation_id: str | None = None) -> dict | None:
     """Build the ChromaDB ``where`` filter for a knowledge search.
 
     When *scope* is ``conversation``, returns an ``$or`` filter that includes
     both conversation-scoped docs (filtered by *conversation_id*) **and**
     project-scoped docs so that project knowledge is always visible.
     """
-    if scope == SCOPE_CONVERSATION and conversation_id:
+    if scope == SCOPE_CONVERSATION:
+        if not conversation_id:
+            return None
         return {
             "$or": [
                 {"$and": [{"scope": SCOPE_CONVERSATION}, {"conversation_id": conversation_id}]},
@@ -81,6 +83,9 @@ class KnowledgeSearcher:
         bound_log.info("search_start")
 
         where = build_search_filter(scope, conversation_id)
+        if where is None:
+            bound_log.warning("search_skipped", reason="conversation scope requires conversation_id")
+            return []
 
         collection = self._get_collection()
         results = collection.query(
@@ -97,11 +102,7 @@ class KnowledgeSearcher:
             distances = results["distances"][0]
             for doc, meta, dist in zip(docs, metas, distances, strict=False):
                 score = 1.0 - dist
-                threshold = (
-                    MIN_RELEVANCE_SCORE_CONVERSATION
-                    if scope == SCOPE_CONVERSATION
-                    else MIN_RELEVANCE_SCORE
-                )
+                threshold = MIN_RELEVANCE_SCORE_CONVERSATION if scope == SCOPE_CONVERSATION else MIN_RELEVANCE_SCORE
                 if score < threshold:
                     continue
                 fid = meta.get("file_id", "")

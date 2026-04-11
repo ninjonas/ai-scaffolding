@@ -161,9 +161,9 @@ class TestBuildSearchFilter:
         result = build_search_filter(SCOPE_PROJECT, conversation_id="conv-1")
         assert result == {"scope": SCOPE_PROJECT}
 
-    def test_conversation_scope_without_id_falls_back(self):
+    def test_conversation_scope_without_id_returns_none(self):
         result = build_search_filter(SCOPE_CONVERSATION)
-        assert result == {"scope": SCOPE_CONVERSATION}
+        assert result is None
 
     def test_conversation_scope_with_id_uses_or_filter(self):
         result = build_search_filter(SCOPE_CONVERSATION, conversation_id="conv-1")
