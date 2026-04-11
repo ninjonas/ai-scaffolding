@@ -4,23 +4,6 @@ import { ChatInput } from './ChatInput';
 import { KnowledgeSidebar } from './KnowledgeSidebar';
 import { MessageBubble } from './MessageBubble';
 
-const BookIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-  </svg>
-);
-
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -78,17 +61,6 @@ export function Chat() {
       <div className="chat-container">
         <div className="chat-header">
           <h1>Scaffolding Chat</h1>
-          <div className="chat-header-actions">
-            <button
-              className={`knowledge-toggle-btn${showKnowledge ? ' active' : ''}`}
-              type="button"
-              onClick={() => setShowKnowledge((prev) => !prev)}
-              title="Toggle knowledge sidebar"
-              aria-label="Toggle knowledge sidebar"
-            >
-              <BookIcon />
-            </button>
-          </div>
         </div>
         <div className="chat-messages">
           {messages.length === 0 && (
@@ -113,7 +85,8 @@ export function Chat() {
         <ChatInput
           onSend={handleSend}
           disabled={loading}
-          onAttachKnowledge={() => setShowKnowledge(true)}
+          onToggleKnowledge={() => setShowKnowledge((prev) => !prev)}
+          knowledgeOpen={showKnowledge}
         />
       </div>
       {showKnowledge && (

@@ -4,13 +4,16 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.repositories.conversation import ConversationRepository
+from app.domain.repositories.knowledge_file import KnowledgeFileRepository
 from app.infrastructure.repositories.conversation import SQLConversationRepository
+from app.infrastructure.repositories.knowledge_file import SQLKnowledgeFileRepository
 
 log = structlog.get_logger()
 
 
 class SQLAlchemyUnitOfWork:
     conversations: ConversationRepository
+    knowledge: KnowledgeFileRepository
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
@@ -18,6 +21,7 @@ class SQLAlchemyUnitOfWork:
     async def __aenter__(self) -> Self:
         self._session = self._session_factory()
         self.conversations = SQLConversationRepository(self._session)
+        self.knowledge = SQLKnowledgeFileRepository(self._session)
         log.debug("uow_started")
         return self
 

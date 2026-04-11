@@ -3,7 +3,8 @@ import { useState, useRef, type KeyboardEvent } from 'react';
 interface ChatInputProps {
   onSend: (message: string, images: string[]) => void;
   disabled: boolean;
-  onAttachKnowledge?: () => void;
+  onToggleKnowledge?: () => void;
+  knowledgeOpen?: boolean;
 }
 
 const BookIcon = () => (
@@ -55,7 +56,7 @@ const SendArrowIcon = () => (
   </svg>
 );
 
-export function ChatInput({ onSend, disabled, onAttachKnowledge }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, onToggleKnowledge, knowledgeOpen }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -113,14 +114,15 @@ export function ChatInput({ onSend, disabled, onAttachKnowledge }: ChatInputProp
         </div>
       )}
       <div className="chat-input-row">
-        {onAttachKnowledge && (
+        {onToggleKnowledge && (
           <button
-            className="attach-btn"
+            className={`attach-btn${knowledgeOpen ? ' active' : ''}`}
             type="button"
-            onClick={onAttachKnowledge}
+            onClick={onToggleKnowledge}
             disabled={disabled}
-            title="Attach knowledge"
-            aria-label="Attach knowledge"
+            title="Toggle knowledge sidebar"
+            aria-label="Toggle knowledge sidebar"
+            aria-pressed={knowledgeOpen}
           >
             <BookIcon />
           </button>

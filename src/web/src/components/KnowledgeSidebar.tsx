@@ -1,47 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   listKnowledgeFiles,
   deleteKnowledgeFile,
   type KnowledgeCatalogEntry,
 } from '../api/knowledge';
 import { KnowledgeFileEditor } from './KnowledgeFileEditor';
+import { CloseIcon, DocumentIcon, PlusIcon, TrashIcon } from './KnowledgeIcons';
 
 interface KnowledgeSidebarProps {
   conversationId?: string;
   onClose: () => void;
 }
-
-const TrashIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-  </svg>
-);
-
-const CloseIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M18 6 6 18M6 6l12 12" />
-  </svg>
-);
 
 type Scope = 'project' | 'conversation';
 
@@ -51,6 +20,8 @@ export function KnowledgeSidebar({ conversationId, onClose }: KnowledgeSidebarPr
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showEditor, setShowEditor] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
 
   const fetchFiles = useCallback(async () => {
     setLoading(true);
@@ -82,6 +53,34 @@ export function KnowledgeSidebar({ conversationId, onClose }: KnowledgeSidebarPr
     }
   };
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current += 1;
+    if (dragCounterRef.current === 1) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current === 0) setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setIsDragging(false);
+    setShowEditor(true);
+  };
+
+  const openEditor = () => setShowEditor(true);
+
+  const isEmpty = !loading && files.length === 0;
+  const hasFiles = !loading && files.length > 0;
+
   return (
     <div className="knowledge-sidebar">
       <div className="knowledge-sidebar-header">
@@ -106,45 +105,82 @@ export function KnowledgeSidebar({ conversationId, onClose }: KnowledgeSidebarPr
           </button>
         )}
       </div>
-      <button className="knowledge-upload-btn" onClick={() => setShowEditor(true)}>
-        Upload file
-      </button>
+
       {error && <div className="knowledge-error">{error}</div>}
-      <div className="knowledge-file-list">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <div key={i} className="knowledge-skeleton" />)
-        ) : files.length === 0 ? (
-          <p className="knowledge-empty">No knowledge files yet. Upload one to get started.</p>
-        ) : (
-          files.map((f) => (
-            <div key={f.id} className="knowledge-file-row">
-              <div className="knowledge-file-info">
-                <div className="knowledge-file-name">
-                  {f.name}
-                  <span className="knowledge-file-badge">{f.fileType}</span>
-                </div>
-                {f.description && <div className="knowledge-file-desc">{f.description}</div>}
-                {f.tags.length > 0 && (
-                  <div className="knowledge-file-tags">
-                    {f.tags.map((t) => (
-                      <span key={t} className="knowledge-tag">
-                        {t}
-                      </span>
-                    ))}
+
+      {loading && (
+        <div className="knowledge-file-list">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="knowledge-skeleton" />
+          ))}
+        </div>
+      )}
+
+      {isEmpty && (
+        <div
+          className={`knowledge-drop-zone${isDragging ? ' dragging' : ''}`}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onClick={openEditor}
+          role="button"
+          tabIndex={0}
+          aria-label="Upload knowledge file"
+          onKeyDown={(e) => e.key === 'Enter' && openEditor()}
+        >
+          <div className="knowledge-drop-icon">
+            <DocumentIcon />
+          </div>
+          <p className="knowledge-drop-headline">Drop files here</p>
+          <p className="knowledge-drop-sub">or click to browse</p>
+        </div>
+      )}
+
+      {hasFiles && (
+        <>
+          <button className="knowledge-add-btn" onClick={openEditor}>
+            <PlusIcon />
+            Add file
+          </button>
+          <div
+            className={`knowledge-file-list${isDragging ? ' drop-target' : ''}`}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            {files.map((f) => (
+              <div key={f.id} className="knowledge-file-row">
+                <div className="knowledge-file-info">
+                  <div className="knowledge-file-name">
+                    {f.name}
+                    <span className="knowledge-file-badge">{f.fileType}</span>
                   </div>
-                )}
+                  {f.description && <div className="knowledge-file-desc">{f.description}</div>}
+                  {f.tags.length > 0 && (
+                    <div className="knowledge-file-tags">
+                      {f.tags.map((t) => (
+                        <span key={t} className="knowledge-tag">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  className="knowledge-delete-btn"
+                  onClick={() => handleDelete(f.id, f.name)}
+                  aria-label={`Delete ${f.name}`}
+                >
+                  <TrashIcon />
+                </button>
               </div>
-              <button
-                className="knowledge-delete-btn"
-                onClick={() => handleDelete(f.id, f.name)}
-                aria-label={`Delete ${f.name}`}
-              >
-                <TrashIcon />
-              </button>
-            </div>
-          ))
-        )}
-      </div>
+            ))}
+          </div>
+        </>
+      )}
+
       {showEditor && (
         <KnowledgeFileEditor
           scope={tab}

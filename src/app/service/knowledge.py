@@ -7,8 +7,8 @@ from app.domain.entities.knowledge_file import (
     SCOPE_CONVERSATION,
     KnowledgeFile,
 )
-from app.domain.repositories.knowledge_file import KnowledgeFileRepository
 from app.infrastructure.mappers.knowledge_file import KnowledgeFileDataMapper
+from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
 from app.service.knowledge_frontmatter import detect_file_type, generate
 
 log = structlog.get_logger()
@@ -20,11 +20,8 @@ ERR_FILE_NOT_FOUND = "Knowledge file not found: "
 
 
 class KnowledgeService:
-    def __init__(self, repo_factory: Callable[[], KnowledgeFileRepository]) -> None:
-        self._repo_factory = repo_factory
-
-    def _repo(self) -> KnowledgeFileRepository:
-        return self._repo_factory()
+    def __init__(self, uow_factory: Callable[[], SQLAlchemyUnitOfWork]) -> None:
+        self._uow_factory = uow_factory
 
     async def upload(
         self,
@@ -45,23 +42,26 @@ class KnowledgeService:
 
         file_type = detect_file_type(filename)
 
-        existing = await self._repo().list(scope=scope, conversation_id=conversation_id)
-        limit = MAX_CONVERSATION_FILES if scope == SCOPE_CONVERSATION else MAX_PROJECT_FILES
-        if len(existing) >= limit:
-            raise ValueError(f"File limit reached: max {limit} files for scope '{scope}'")
+        async with self._uow_factory() as uow:
+            existing = await uow.knowledge.list(scope=scope, conversation_id=conversation_id)
+            limit = MAX_CONVERSATION_FILES if scope == SCOPE_CONVERSATION else MAX_PROJECT_FILES
+            if len(existing) >= limit:
+                raise ValueError(f"File limit reached: max {limit} files for scope '{scope}'")
 
-        name, description, tags = generate(filename, content, file_type)
-        knowledge_file = KnowledgeFile(
-            name=name,
-            description=description,
-            content=content,
-            file_type=file_type,
-            scope=scope,
-            tags=tags,
-            conversation_id=conversation_id,
-        )
+            name, description, tags = generate(filename, content, file_type)
+            knowledge_file = KnowledgeFile(
+                name=name,
+                description=description,
+                content=content,
+                file_type=file_type,
+                scope=scope,
+                tags=tags,
+                conversation_id=conversation_id,
+            )
 
-        await self._repo().save(knowledge_file)
+            await uow.knowledge.save(knowledge_file)
+            await uow.commit()
+
         log.info(
             "knowledge_upload_complete",
             file_id=knowledge_file.id,
@@ -82,37 +82,43 @@ class KnowledgeService:
     ) -> KnowledgeFile:
         log.info("knowledge_update_start", file_id=file_id)
 
-        existing = await self._repo().get_by_id(file_id)
-        if existing is None:
-            raise ValueError(ERR_FILE_NOT_FOUND + file_id)
+        async with self._uow_factory() as uow:
+            existing = await uow.knowledge.get_by_id(file_id)
+            if existing is None:
+                raise ValueError(ERR_FILE_NOT_FOUND + file_id)
 
-        updated = KnowledgeFile(
-            id=existing.id,
-            name=name if name is not None else existing.name,
-            description=description if description is not None else existing.description,
-            content=content if content is not None else existing.content,
-            file_type=existing.file_type,
-            scope=existing.scope,
-            tags=tags if tags is not None else existing.tags,
-            conversation_id=existing.conversation_id,
-            created_at=existing.created_at,
-            updated_at=datetime.utcnow(),
-        )
+            updated = KnowledgeFile(
+                id=existing.id,
+                name=name if name is not None else existing.name,
+                description=description if description is not None else existing.description,
+                content=content if content is not None else existing.content,
+                file_type=existing.file_type,
+                scope=existing.scope,
+                tags=tags if tags is not None else existing.tags,
+                conversation_id=existing.conversation_id,
+                created_at=existing.created_at,
+                updated_at=datetime.utcnow(),
+            )
 
-        await self._repo().save(updated)
+            await uow.knowledge.save(updated)
+            await uow.commit()
+
         log.info("knowledge_update_complete", file_id=file_id, name=updated.name)
         return updated
 
     async def get(self, file_id: str) -> KnowledgeFile | None:
         log.debug("knowledge_get", file_id=file_id)
-        return await self._repo().get_by_id(file_id)
+        async with self._uow_factory() as uow:
+            return await uow.knowledge.get_by_id(file_id)
 
     async def delete(self, file_id: str) -> None:
         log.info("knowledge_delete_start", file_id=file_id)
-        existing = await self._repo().get_by_id(file_id)
-        if existing is None:
-            raise ValueError(ERR_FILE_NOT_FOUND + file_id)
-        await self._repo().delete(file_id)
+        async with self._uow_factory() as uow:
+            existing = await uow.knowledge.get_by_id(file_id)
+            if existing is None:
+                raise ValueError(ERR_FILE_NOT_FOUND + file_id)
+            await uow.knowledge.delete(file_id)
+            await uow.commit()
         log.info("knowledge_delete_complete", file_id=file_id)
 
     async def list(
@@ -121,7 +127,8 @@ class KnowledgeService:
         conversation_id: str | None = None,
     ) -> list[KnowledgeFile]:
         log.debug("knowledge_list", scope=scope, conversation_id=conversation_id)
-        return await self._repo().list(scope=scope, conversation_id=conversation_id)
+        async with self._uow_factory() as uow:
+            return await uow.knowledge.list(scope=scope, conversation_id=conversation_id)
 
     async def get_catalog(
         self,
@@ -129,5 +136,6 @@ class KnowledgeService:
         conversation_id: str | None = None,
     ) -> list[dict]:
         log.debug("knowledge_get_catalog", scope=scope, conversation_id=conversation_id)
-        files = await self._repo().list(scope=scope, conversation_id=conversation_id)
+        async with self._uow_factory() as uow:
+            files = await uow.knowledge.list(scope=scope, conversation_id=conversation_id)
         return [KnowledgeFileDataMapper.to_catalog_dict(f) for f in files]
