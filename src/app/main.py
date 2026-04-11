@@ -52,6 +52,7 @@ async def lifespan(app: FastAPI):
 
     _container = Container(settings=settings)
     _container._register("chat_service", chat_service)
+    _container._register("knowledge_service", knowledge_service)
 
     import app.shared.di as di_module
 

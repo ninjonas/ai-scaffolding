@@ -103,6 +103,10 @@ class KnowledgeService:
         log.info("knowledge_update_complete", file_id=file_id, name=updated.name)
         return updated
 
+    async def get(self, file_id: str) -> KnowledgeFile | None:
+        log.debug("knowledge_get", file_id=file_id)
+        return await self._repo().get_by_id(file_id)
+
     async def delete(self, file_id: str) -> None:
         log.info("knowledge_delete_start", file_id=file_id)
         existing = await self._repo().get_by_id(file_id)

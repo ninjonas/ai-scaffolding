@@ -87,12 +87,12 @@ src/web/src/
 - [x] Update `AgentBroker.chat_response()` to accept and forward `knowledge_catalog`.
 - [x] Update `ChatService.send_message()` to fetch catalog (project + conversation level) and pass through broker.
 
-### Phase 4: REST API `Not Started`
+### Phase 4: REST API `Done`
 
-- [ ] Create DTOs in `src/app/api/dto/knowledge.py`: `KnowledgeFileUploadDTO`, `KnowledgeFileUpdateDTO`, `KnowledgeFileResponseDTO`, `KnowledgeCatalogEntryDTO`.
-- [ ] Create routes in `src/app/api/routes/knowledge.py`: `POST /api/knowledge`, `GET /api/knowledge`, `GET /api/knowledge/{id}`, `PUT /api/knowledge/{id}`, `DELETE /api/knowledge/{id}`.
-- [ ] Create mapper in `src/app/infrastructure/mappers/knowledge_file.py`.
-- [ ] Wire `KnowledgeService` into DI container in `main.py`.
+- [x] Create DTOs in `src/app/api/dto/knowledge.py`: `KnowledgeFileUploadDTO`, `KnowledgeFileUpdateDTO`, `KnowledgeFileResponseDTO`, `KnowledgeCatalogEntryDTO`.
+- [x] Create routes in `src/app/api/routes/knowledge.py`: `POST /api/knowledge`, `GET /api/knowledge`, `GET /api/knowledge/{id}`, `PUT /api/knowledge/{id}`, `DELETE /api/knowledge/{id}`.
+- [x] Create mapper in `src/app/infrastructure/mappers/knowledge_file.py`.
+- [x] Wire `KnowledgeService` into DI container in `main.py`.
 
 ### Phase 5: Frontend, sidebar panel `Not Started`
 
@@ -289,3 +289,4 @@ No new dependencies. Uses existing React, fetch API.
 | 2026-04-10 | Claude         | Migrated to new plan format: added phase statuses, task checkboxes, agent execution strategy, changelog |
 | 2026-04-10 | Claude (api)   | Phase 2 complete: KnowledgeService + knowledge_frontmatter module implemented, all checks pass          |
 | 2026-04-10 | Claude (api)   | Phase 3 partial: AgentBroker.chat_response and ChatService.send_message updated with knowledge catalog  |
+| 2026-04-10 | Claude (api)   | Phase 4 complete: DTOs, routes, mapper DTO methods, DI wiring, and router registration implemented      |

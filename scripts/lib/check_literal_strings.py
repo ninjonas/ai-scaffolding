@@ -22,6 +22,7 @@ Usage:
     check_literal_strings.py [file ...]   # check specific files
     check_literal_strings.py              # check all src/ files
 """
+
 import ast
 import sys
 from collections import defaultdict
@@ -40,12 +41,13 @@ MIN_STRING_LENGTH = 2
 # Strings that are intentional pairs (e.g. a field default and a named constant
 # that happen to share the same value). These are excluded from duplicate checks.
 EXEMPT_LITERALS = {
-    "INFO",         # config.py log_level default + logging.py configure_logging default
-    "messages",     # ORM relationship names (unavoidable SQLAlchemy backref pattern)
+    "INFO",  # config.py log_level default + logging.py configure_logging default
+    "messages",  # ORM relationship names (unavoidable SQLAlchemy backref pattern)
     "args",
     "assets",
     "llm",
     "tool_calls",
+    "/{file_id}",  # FastAPI route path parameter — decorator argument, intentionally repeated
 }
 
 # Strings to always ignore
@@ -151,9 +153,7 @@ def build_parent_map(tree: ast.AST) -> dict:
     return parent_map
 
 
-def extract_string_literals(
-    file_path: Path, repo_root: Path
-) -> list[tuple[str, int, str]]:
+def extract_string_literals(file_path: Path, repo_root: Path) -> list[tuple[str, int, str]]:
     """Extract non-exempt string literals from a Python file.
 
     Returns list of (string_value, line_number, relative_path).
@@ -219,9 +219,7 @@ def extract_constants_from_app(app_dir: Path, repo_root: Path) -> dict[str, str]
                         if isinstance(node.value, ast.Constant) and isinstance(
                             node.value.value, str
                         ):
-                            constants[node.value.value] = (
-                                f"{rel_path}:{node.lineno} {target.id}"
-                            )
+                            constants[node.value.value] = f"{rel_path}:{node.lineno} {target.id}"
 
     return constants
 
@@ -296,16 +294,8 @@ def main() -> int:
         app_files = [f for f in files if "src/app" in str(f)]
         test_files = [f for f in files if "src/tests" in str(f)]
     else:
-        app_files = (
-            list(app_dir.rglob("*.py"))
-            if app_dir.exists()
-            else []
-        )
-        test_files = (
-            list(tests_dir.rglob("*.py"))
-            if tests_dir.exists()
-            else []
-        )
+        app_files = list(app_dir.rglob("*.py")) if app_dir.exists() else []
+        test_files = list(tests_dir.rglob("*.py")) if tests_dir.exists() else []
         app_files = [f for f in app_files if not any(p in str(f) for p in SKIP_PATTERNS)]
         test_files = [f for f in test_files if not any(p in str(f) for p in SKIP_PATTERNS)]
 
@@ -340,7 +330,7 @@ def main() -> int:
         print(f"\n  {RED}Repeated literals in app code (3+ occurrences):{NC}")
         for err in app_errors[:20]:
             truncated = err["value"][:50] + "..." if len(err["value"]) > 50 else err["value"]
-            print(f"    {RED}FAIL{NC} \"{truncated}\" appears {err['count']} times:")
+            print(f'    {RED}FAIL{NC} "{truncated}" appears {err["count"]} times:')
             for line, path in err["locations"][:5]:
                 print(f"         {path}:{line}")
             if len(err["locations"]) > 5:
@@ -351,7 +341,7 @@ def main() -> int:
         print(f"\n  {YELLOW}Repeated literals in app code (2 occurrences):{NC}")
         for warn in app_warnings[:20]:
             truncated = warn["value"][:50] + "..." if len(warn["value"]) > 50 else warn["value"]
-            print(f"    {YELLOW}WARN{NC} \"{truncated}\" appears {warn['count']} times:")
+            print(f'    {YELLOW}WARN{NC} "{truncated}" appears {warn["count"]} times:')
             for line, path in warn["locations"]:
                 print(f"         {path}:{line}")
 
@@ -359,7 +349,7 @@ def main() -> int:
         print(f"\n  {RED}Tests using raw strings instead of app constants:{NC}")
         for v in test_violations[:20]:
             truncated = v["value"][:50] + "..." if len(v["value"]) > 50 else v["value"]
-            print(f"    {RED}FAIL{NC} {v['file']}:{v['line']}: \"{truncated}\"")
+            print(f'    {RED}FAIL{NC} {v["file"]}:{v["line"]}: "{truncated}"')
             print(f"         -> Use constant from {v['constant_ref']}")
         if len(test_violations) > 20:
             print(f"    ... and {len(test_violations) - 20} more")
