@@ -15,6 +15,9 @@ dependencies = [
     "aiosqlite>=0.20",
     "requests>=2.32",
     "pymdown-extensions>=10.21.2",
+    "langgraph-checkpoint-sqlite>=2.0",
+    "chromadb>=0.5",
+    "tiktoken>=0.7",
 ]
 
 [project.optional-dependencies]
@@ -51,3 +54,10 @@ packages = ["src/app"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.6",
+    "ruff>=0.15.9",
+]

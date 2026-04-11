@@ -11,7 +11,9 @@ from app.agents.supervisor.state import SupervisorState
 log = structlog.get_logger()
 
 
-def create_supervisor_graph(llm: ChatOpenAI, extra_tools: list | None = None) -> StateGraph:
+def create_supervisor_graph(
+    llm: ChatOpenAI, extra_tools: list | None = None, checkpointer: object | None = None
+) -> StateGraph:
     log.info("creating_supervisor_graph")
 
     chatbot = create_chatbot_graph(llm, extra_tools=extra_tools)
@@ -58,4 +60,4 @@ def create_supervisor_graph(llm: ChatOpenAI, extra_tools: list | None = None) ->
     graph.add_edge(AGENT_RESEARCHER, END)
 
     log.info("supervisor_graph_created")
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)

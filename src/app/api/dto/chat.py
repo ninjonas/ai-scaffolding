@@ -22,6 +22,10 @@ class ChatResponseDTO(CamelModel):
     tool_calls: list[ToolCallDTO] = Field(default_factory=list)
 
 
+class ResumeRequestDTO(CamelModel):
+    approved: bool
+
+
 class ChatStreamChunkDTO(CamelModel):
     content: str = ""
     done: bool = False

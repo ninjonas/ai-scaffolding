@@ -36,6 +36,7 @@ class AgentOrchestrator:
         operation_name: str,
         state_dict: dict,
         result_mapper: Callable[[dict], dict],
+        config: dict | None = None,
         **log_context: Any,
     ) -> dict:
         """Invoke agent graph with centralized timing, logging, error handling.
@@ -44,6 +45,7 @@ class AgentOrchestrator:
             operation_name: Unique identifier for this invocation (e.g. "voice_transcribe").
             state_dict: Input state dict for agent.ainvoke().
             result_mapper: Pure function transforming agent output to domain result.
+            config: Optional LangGraph runtime config (e.g. {"configurable": {"thread_id": ...}}).
             **log_context: Structured logging fields (conversation_id, mime_type, etc.).
 
         Returns:
@@ -57,7 +59,7 @@ class AgentOrchestrator:
 
         start = time.monotonic()
         try:
-            agent_result = await self._agent_graph.ainvoke(state_dict)
+            agent_result = await self._agent_graph.ainvoke(state_dict, config=config)
             mapped_result = result_mapper(agent_result)
 
             duration_s = time.monotonic() - start

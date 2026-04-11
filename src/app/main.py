@@ -49,8 +49,14 @@ async def lifespan(app: FastAPI):
     def make_knowledge_repo() -> SQLKnowledgeFileRepository:
         return SQLKnowledgeFileRepository(session_factory())
 
+    from app.shared.checkpointer import get_checkpointer
+
+    checkpointer = await get_checkpointer(settings)
+
     read_knowledge_file = make_read_knowledge_file_tool(make_knowledge_repo)
-    agent_graph = create_supervisor_graph(llm, extra_tools=[read_knowledge_file])
+    agent_graph = create_supervisor_graph(
+        llm, extra_tools=[read_knowledge_file], checkpointer=checkpointer
+    )
     orchestrator = AgentOrchestrator(agent_graph)
     broker = AgentBroker(orchestrator)
     uow = SQLAlchemyUnitOfWork(session_factory)

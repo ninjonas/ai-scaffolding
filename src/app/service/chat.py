@@ -118,6 +118,21 @@ class ChatService:
         )
         return assistant_message
 
+    async def resume(self, conversation_id: str, approved: bool) -> dict:
+        """Resume a paused conversation thread.
+
+        Args:
+            conversation_id: The thread to resume.
+            approved: Whether the pending action is approved.
+
+        Returns:
+            Dict with 'content' and 'tool_calls' keys from the agent.
+        """
+        log.info("resume_start", conversation_id=conversation_id, approved=approved)
+        result = await self._broker.resume(conversation_id, approved)
+        log.info("resume_complete", conversation_id=conversation_id)
+        return result
+
     async def _get_or_create(self, uow, conversation_id: str | None) -> Conversation:
         log.debug("get_or_create_conversation", conversation_id=conversation_id)
         if conversation_id:

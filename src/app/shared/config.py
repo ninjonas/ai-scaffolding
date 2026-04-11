@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite+aiosqlite:///data/app.db"
 
+    # Persistence
+    checkpoint_db_path: str = "data/checkpoints.db"
+    chroma_path: str = "data/chroma"
+
     # Logging
     log_level: str = "INFO"
     log_json: bool = False

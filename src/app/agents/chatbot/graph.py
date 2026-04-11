@@ -10,7 +10,9 @@ from app.agents.constants import NODE_END, NODE_LLM, NODE_TOOLS
 log = structlog.get_logger()
 
 
-def create_chatbot_graph(llm: ChatOpenAI, extra_tools: list | None = None) -> StateGraph:
+def create_chatbot_graph(
+    llm: ChatOpenAI, extra_tools: list | None = None, checkpointer: object | None = None
+) -> StateGraph:
     log.info("creating_chatbot_graph")
 
     all_tools = ALL_TOOLS + (extra_tools or [])
@@ -32,4 +34,4 @@ def create_chatbot_graph(llm: ChatOpenAI, extra_tools: list | None = None) -> St
     graph.add_edge(NODE_TOOLS, NODE_LLM)
 
     log.info("chatbot_graph_created")
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)

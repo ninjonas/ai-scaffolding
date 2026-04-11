@@ -30,6 +30,7 @@ class AgentBroker:
         content: str,
         images: list[str] | None = None,
         knowledge_catalog: str = "",
+        conversation_id: str | None = None,
         **context: Any,
     ) -> dict:
         """Invoke chat agent with domain-level parameters.
@@ -38,6 +39,7 @@ class AgentBroker:
             content: User message text.
             images: Optional list of base64-encoded images.
             knowledge_catalog: Pre-formatted knowledge catalog string for prompt injection.
+            conversation_id: Optional conversation ID; used as LangGraph thread_id.
             **context: Additional context forwarded as structured log fields.
 
         Returns:
@@ -48,11 +50,34 @@ class AgentBroker:
             "images": images or [],
             "knowledge_catalog": knowledge_catalog,
         }
+        config = {"configurable": {"thread_id": conversation_id}} if conversation_id else None
         return await self._orchestrator.invoke_with_telemetry(
             "chat_response",
             state_dict,
             chat_result_mapper,
+            config=config,
             **context,
+        )
+
+    async def resume(self, conversation_id: str, approved: bool) -> dict:
+        """Resume a paused conversation thread with an approval decision.
+
+        Args:
+            conversation_id: The thread_id to resume.
+            approved: Whether the pending action is approved.
+
+        Returns:
+            Dict with 'content' and 'tool_calls' keys.
+        """
+        from langgraph.types import Command
+
+        config = {"configurable": {"thread_id": conversation_id}}
+        return await self._orchestrator.invoke_with_telemetry(
+            "chat_resume",
+            Command(resume=approved),
+            chat_result_mapper,
+            config=config,
+            conversation_id=conversation_id,
         )
 
     async def voice_transcribe(
