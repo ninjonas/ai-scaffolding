@@ -29,4 +29,8 @@ async def route_task(state: SupervisorState, llm) -> dict:
 
 
 def decide_next(state: SupervisorState) -> str:
-    return state.get("next_agent", AGENT_CHATBOT)
+    next_agent = state.get("next_agent", AGENT_CHATBOT)
+    log.debug("supervisor_decide_next", next_agent=next_agent)
+    has_response = next_agent != AGENT_CHATBOT
+    log.debug("supervisor_decided", next_agent=next_agent, has_response=has_response)
+    return next_agent

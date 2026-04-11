@@ -3,9 +3,9 @@ import { describe, it, expect } from 'vitest';
 import { MessageBubble } from './MessageBubble';
 
 describe('MessageBubble', () => {
-  it('renders user role label', () => {
+  it('does not render role label for user messages', () => {
     render(<MessageBubble role="user" content="Hello" />);
-    expect(screen.getByText('You')).toBeInTheDocument();
+    expect(screen.queryByText('You')).not.toBeInTheDocument();
   });
 
   it('renders assistant role label', () => {
@@ -34,8 +34,10 @@ describe('MessageBubble', () => {
     expect(screen.queryByText('Tools used:')).not.toBeInTheDocument();
   });
 
-  it('applies loading class when loading prop is true', () => {
-    const { container } = render(<MessageBubble role="assistant" content="Thinking..." loading />);
-    expect(container.querySelector('.message-content.loading')).toBeInTheDocument();
+  it('renders typing indicator when loading prop is true', () => {
+    const { container } = render(<MessageBubble role="assistant" content="" loading />);
+    expect(container.querySelector('.message-loading')).toBeInTheDocument();
+    expect(container.querySelector('.typing-dots')).toBeInTheDocument();
+    expect(container.querySelector('.message-content')).not.toBeInTheDocument();
   });
 });

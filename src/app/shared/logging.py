@@ -36,7 +36,8 @@ def configure_logging(*, log_level: str = "INFO", log_json: bool = False) -> Non
     if log_json:
         renderer: structlog.types.Processor = structlog.processors.JSONRenderer()
     else:
-        renderer = structlog.dev.ConsoleRenderer()
+        # Avoid ANSI in captured stdout (e.g. `uvicorn ... > logs/api.log`): only color a real TTY.
+        renderer = structlog.dev.ConsoleRenderer(colors=sys.stdout.isatty())
 
     structlog.configure(
         processors=[

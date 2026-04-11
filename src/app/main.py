@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.agents.orchestrator import AgentBroker, AgentOrchestrator
 from app.api.router import api_router
 from app.infrastructure.database import create_engine, create_session_factory, init_database
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
@@ -40,8 +41,10 @@ async def lifespan(app: FastAPI):
     from app.agents.supervisor.graph import create_supervisor_graph
 
     agent_graph = create_supervisor_graph(llm)
+    orchestrator = AgentOrchestrator(agent_graph)
+    broker = AgentBroker(orchestrator)
     uow = SQLAlchemyUnitOfWork(session_factory)
-    chat_service = ChatService(agent_graph=agent_graph, unit_of_work=uow)
+    chat_service = ChatService(broker=broker, unit_of_work=uow)
 
     _container = Container(settings=settings)
     _container._register("chat_service", chat_service)

@@ -1,13 +1,15 @@
 import io
+import time
 from dataclasses import dataclass
 
 import structlog
 from PIL import Image
 
-log = structlog.get_logger()
+log = structlog.get_logger(__name__)
 
 MAX_DIMENSION = 1024
 JPEG_QUALITY = 85
+JPEG_FORMAT = "JPEG"
 
 
 @dataclass(frozen=True)
@@ -32,6 +34,7 @@ def optimize_image(image_bytes: bytes) -> OptimizedImageResult:
         format=img.format,
     )
 
+    _resize_start = time.monotonic()
     if max(img.size) > MAX_DIMENSION:
         img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
 
@@ -39,13 +42,14 @@ def optimize_image(image_bytes: bytes) -> OptimizedImageResult:
         output_format = "PNG"
     else:
         img = img.convert("RGB")
-        output_format = "JPEG"
+        output_format = JPEG_FORMAT
 
     buffer = io.BytesIO()
     save_kwargs: dict = {"format": output_format, "optimize": True}
-    if output_format == "JPEG":
+    if output_format == JPEG_FORMAT:
         save_kwargs["quality"] = JPEG_QUALITY
     img.save(buffer, **save_kwargs)
+    _resize_duration_ms = round((time.monotonic() - _resize_start) * 1000, 2)
 
     optimized_bytes = buffer.tell()
     buffer.seek(0)
@@ -57,6 +61,7 @@ def optimize_image(image_bytes: bytes) -> OptimizedImageResult:
         original_bytes=original_bytes,
         optimized_bytes=optimized_bytes,
         format=output_format,
+        duration_ms=_resize_duration_ms,
     )
 
     return OptimizedImageResult(

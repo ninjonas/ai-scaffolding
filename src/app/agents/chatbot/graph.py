@@ -15,8 +15,8 @@ def create_chatbot_graph(llm: ChatOpenAI) -> StateGraph:
 
     tool_node = ToolNode(ALL_TOOLS)
 
-    def llm_node(state: ChatbotState) -> dict:
-        return invoke_llm(state, llm)
+    async def llm_node(state: ChatbotState) -> dict:
+        return await invoke_llm(state, llm)
 
     graph = StateGraph(ChatbotState)
     graph.add_node(NODE_LLM, llm_node)

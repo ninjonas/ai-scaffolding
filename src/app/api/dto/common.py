@@ -12,3 +12,7 @@ class CamelModel(BaseModel):
 class ErrorDTO(CamelModel):
     detail: str
     status_code: int
+
+
+class HealthResponseDTO(BaseModel):
+    status: str

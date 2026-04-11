@@ -6,6 +6,7 @@ from langchain_core.tools import tool
 log = structlog.get_logger()
 
 PROJECT_ROOT = Path.cwd()
+ACCESS_DENIED_MSG = "Access denied: path is outside the project directory."
 
 
 @tool
@@ -14,7 +15,7 @@ def read_file(path: str) -> str:
     file_path = (PROJECT_ROOT / path).resolve()
     if not str(file_path).startswith(str(PROJECT_ROOT)):
         log.warning("file_access_denied", path=path)
-        return "Access denied: path is outside the project directory."
+        return ACCESS_DENIED_MSG
 
     if not file_path.exists():
         log.warning("file_not_found", path=path)
@@ -31,7 +32,7 @@ def list_directory(path: str = ".") -> list[str]:
     dir_path = (PROJECT_ROOT / path).resolve()
     if not str(dir_path).startswith(str(PROJECT_ROOT)):
         log.warning("dir_access_denied", path=path)
-        return ["Access denied: path is outside the project directory."]
+        return [ACCESS_DENIED_MSG]
 
     if not dir_path.is_dir():
         log.warning("dir_not_found", path=path)

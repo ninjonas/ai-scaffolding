@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from app.api.mappers.chat import ChatMapper
 from app.domain.entities.message import Message, MessageRole
+from app.infrastructure.mappers.chat import ChatMapper
 from app.infrastructure.mappers.conversation import ConversationDataMapper
 from app.infrastructure.models.conversation import ConversationModel
 from app.infrastructure.models.message import MessageModel

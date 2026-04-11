@@ -16,4 +16,6 @@ MOCK_RESULTS = [
 def search_web(query: str, num_results: int = 5) -> list[dict[str, str]]:
     """Search the web for information. Returns a list of results with title, url, and snippet."""
     log.info("web_search", query=query, num_results=num_results)
-    return MOCK_RESULTS
+    results = MOCK_RESULTS
+    log.info("web_search_done", query=query, result_count=len(results))
+    return results

@@ -1,4 +1,5 @@
 import structlog
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 
 from app.shared.config import Settings
@@ -6,7 +7,7 @@ from app.shared.config import Settings
 log = structlog.get_logger()
 
 
-def create_llm(settings: Settings) -> ChatOpenAI:
+def create_llm(settings: Settings) -> BaseChatModel:
     log.info(
         "creating_llm",
         model=settings.llm_model,

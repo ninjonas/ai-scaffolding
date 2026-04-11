@@ -33,4 +33,6 @@ These principles apply to **both Python and TypeScript** code.
 - Infrastructure (database, APIs, file I/O) lives behind abstractions that the domain defines.
 - Use dependency injection to wire infrastructure into application services (see `code-conventions.md`).
 - Keep controllers/routes thin — delegate to service layer immediately.
+- Services orchestrate agents via compiled graphs: complex workflows (multi-step, tools, routing) invoke agent graphs; simple domain operations use direct service logic.
+- Compile agent graphs at app startup and inject into services via DI — never instantiate agents in service code.
 - When refactoring, move toward these patterns incrementally — don't over-engineer simple CRUD.

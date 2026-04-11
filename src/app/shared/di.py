@@ -1,8 +1,9 @@
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
 import structlog
-from langchain_openai import ChatOpenAI
+from langchain_core.language_models.chat_models import BaseChatModel
 
 from app.shared.config import Settings
 from app.shared.llm import create_llm
@@ -19,9 +20,12 @@ class Container:
     _instances: dict[str, Any] = field(default_factory=dict, repr=False)
 
     @property
-    def llm(self) -> ChatOpenAI:
+    def llm(self) -> BaseChatModel:
         if _KEY_LLM not in self._instances:
+            start = time.monotonic()
             self._instances[_KEY_LLM] = create_llm(self.settings)
+            duration_ms = round((time.monotonic() - start) * 1000)
+            log.debug("container_llm_created", duration_ms=duration_ms)
         return self._instances[_KEY_LLM]
 
     def _register(self, name: str, instance: object) -> None:

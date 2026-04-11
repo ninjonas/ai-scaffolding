@@ -7,6 +7,7 @@ DOCS_PORT := env("DOCS_PORT", "8100")
 # Sync .claude/ markdown into docs/ and update mkdocs.yml nav
 sync-docs:
     uv run python scripts/lib/sync_docs.py
+    uv run mdformat docs/
 
 # Start MkDocs dev server
 start *args: sync-docs

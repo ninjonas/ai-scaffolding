@@ -22,25 +22,31 @@ nav:
   # BEGIN GENERATED NAV
   - Plans:
     - 'Plan: Introduce LangGraph & LangChain to Scaffolding': plans/001-langgraph-introduction.md
-  - Guidelines:
+- 'Plan: `just fork` Scaffolding Clone': plans/004-fork-recipe.md
+- Guidelines:
     - Overview: guidelines/index.md
     - Agent Conventions: guidelines/agent-conventions.md
     - Architecture Principles: guidelines/architecture.md
     - Code Conventions: guidelines/code-conventions.md
+    - Communication Style: guidelines/communication-style.md
     - Conventions: guidelines/conventions.md
     - Common commands: guidelines/dev-workflow.md
+    - Diagrams: guidelines/diagrams.md
     - Documents: guidelines/documents.md
     - Git commit messages: guidelines/git-commits.md
     - Justfile Conventions: guidelines/justfile-conventions.md
+    - LangGraph conventions: guidelines/langgraph-conventions.md
+    - LangGraph testing: guidelines/langgraph-testing.md
     - Logging Enforcement: guidelines/logging-enforcement.md
     - Logging: guidelines/logging.md
     - Plan Documents: guidelines/plan-documents.md
     - Project structure: guidelines/project-structure.md
+    - Rule conventions: guidelines/rule-conventions.md
   - Agents:
     - Overview: agents/index.md
     - API Agent: agents/api.md
     - Config Agent: agents/config.md
-    - Database Agent: agents/database.md
+- Database Agent: agents/database.md
     - Graphs Agent: agents/graphs.md
     - Prompts Agent: agents/prompts.md
     - Recipes Agent: agents/recipes.md
@@ -52,15 +58,25 @@ nav:
     - Overview: skills/index.md
     - Steps: skills/add-just-recipe.md
     - Check — Convention Checks: skills/check.md
-    - dev: skills/dev.md
+    - Claude Code CLI Skill: skills/claude.md
+- Create paired documentation: skills/create-doc.md
+    - Create PR: skills/create-pr.md
+    - Create Rule: skills/create-rule.md
+- dev: skills/dev.md
     - docs: skills/docs.md
     - format: skills/format.md
+    - LangGraph testing: skills/langgraph-testing.md
     - lint: skills/lint.md
     - setup: skills/setup.md
+    - Sync AI Tools: skills/sync-ai-tools.md
     - test: skills/test.md
   # END GENERATED NAV
 
 markdown_extensions:
   - tables
-  - fenced_code
   - codehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format

@@ -144,6 +144,8 @@ def main() -> None:
 
     # Scan existing docs/ subdirectories
     nav_sections.extend(nav_from_dir(DOCS_DIR / "plans", "Plans"))
+    nav_sections.extend(nav_from_dir(DOCS_DIR / "functional", "Functional Docs"))
+    nav_sections.extend(nav_from_dir(DOCS_DIR / "technical", "Technical Docs"))
 
     # Sync .claude/ into docs/
     nav_sections.extend(

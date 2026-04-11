@@ -7,12 +7,13 @@ from langchain_core.tools import tool
 log = structlog.get_logger()
 
 SKILLS_DIR = Path(__file__).parent
+SKILL_FILENAME = "SKILL.md"
 
 
 def build_skill_catalog() -> list[dict[str, Any]]:
     catalog = []
     for skill_dir in sorted(SKILLS_DIR.iterdir()):
-        skill_md = skill_dir / "SKILL.md"
+        skill_md = skill_dir / SKILL_FILENAME
         if skill_dir.is_dir() and skill_md.exists():
             frontmatter, description = _parse_skill_md(skill_md)
             catalog.append(
@@ -50,7 +51,7 @@ def _parse_skill_md(path: Path) -> tuple[dict[str, str], str]:
 def load_skill(name: str) -> str:
     """Load full instructions for a skill by name."""
     skill_dir = SKILLS_DIR / name
-    skill_md = skill_dir / "SKILL.md"
+    skill_md = skill_dir / SKILL_FILENAME
 
     if not skill_md.exists():
         log.warning("skill_not_found", skill=name)

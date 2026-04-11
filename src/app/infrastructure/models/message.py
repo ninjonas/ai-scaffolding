@@ -13,6 +13,8 @@ from app.infrastructure.models import Base
 if TYPE_CHECKING:
     from app.infrastructure.models.conversation import ConversationModel
 
+EMPTY_JSON_ARRAY = "[]"
+
 
 class MessageModel(Base):
     __tablename__ = "messages"
@@ -24,8 +26,8 @@ class MessageModel(Base):
     )
     content: Mapped[str] = mapped_column(Text, default="")
     role: Mapped[str] = mapped_column(String, default=MessageRole.USER)
-    images_json: Mapped[str] = mapped_column(Text, default="[]")
-    tool_calls_json: Mapped[str] = mapped_column(Text, default="[]")
+    images_json: Mapped[str] = mapped_column(Text, default=EMPTY_JSON_ARRAY)
+    tool_calls_json: Mapped[str] = mapped_column(Text, default=EMPTY_JSON_ARRAY)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,

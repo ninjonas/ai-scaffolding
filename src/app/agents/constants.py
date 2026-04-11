@@ -13,3 +13,9 @@ AGENT_RESEARCHER = "researcher"
 AGENTS_DIR = Path(__file__).parent
 PROMPTS_DIR = AGENTS_DIR / "prompts"
 RULES_DIR = AGENTS_DIR / "rules"
+
+# Shared prompt filenames
+PROMPT_SYSTEM = "system.md"
+PROMPT_OUTPUT_FORMAT = "output_format.md"
+PROMPT_PERSONA = "persona.md"
+PROMPT_GLOB_RULES = "*.md"

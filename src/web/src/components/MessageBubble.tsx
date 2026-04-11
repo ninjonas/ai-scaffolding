@@ -4,15 +4,38 @@ interface MessageBubbleProps {
   role: 'user' | 'assistant';
   content: string;
   toolCalls?: ToolCall[];
+  images?: string[];
   loading?: boolean;
 }
 
-export function MessageBubble({ role, content, toolCalls, loading }: MessageBubbleProps) {
+export function MessageBubble({ role, content, toolCalls, images, loading }: MessageBubbleProps) {
   return (
-    <div className={`message message-${role}`}>
-      <div className="message-role">{role === 'user' ? 'You' : 'Assistant'}</div>
-      <div className={`message-content${loading ? ' loading' : ''}`}>{content}</div>
-      {toolCalls && toolCalls.length > 0 && (
+    <div className={`message message-${role}${loading ? ' message-loading' : ''}`}>
+      {role === 'assistant' && <div className="message-role">Assistant</div>}
+      {loading ? (
+        <div className="typing-dots" aria-hidden>
+          <span />
+          <span />
+          <span />
+        </div>
+      ) : (
+        <>
+          {images && images.length > 0 && (
+            <div className="message-images">
+              {images.map((img, i) => (
+                <img
+                  key={i}
+                  src={`data:image/jpeg;base64,${img}`}
+                  alt={`Upload ${i + 1}`}
+                  className="message-image"
+                />
+              ))}
+            </div>
+          )}
+          <div className="message-content">{content}</div>
+        </>
+      )}
+      {!loading && toolCalls && toolCalls.length > 0 && (
         <div className="tool-calls">
           <div className="tool-calls-label">Tools used:</div>
           {toolCalls.map((tc, i) => (

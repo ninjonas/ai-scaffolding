@@ -4,12 +4,13 @@ import structlog
 from fastapi import APIRouter, Depends
 
 from app.api.dto.chat import ChatRequestDTO, ChatResponseDTO
-from app.api.mappers.chat import ChatMapper
+from app.infrastructure.mappers.chat import ChatMapper
 from app.service.chat import ChatService
 
 log = structlog.get_logger()
 
-router = APIRouter(prefix="/api/chat", tags=["chat"])
+CHAT_ROUTE_PREFIX = "/api/chat"
+router = APIRouter(prefix=CHAT_ROUTE_PREFIX, tags=["chat"])
 
 
 def get_chat_service() -> ChatService:
@@ -28,6 +29,8 @@ async def send_message(
 ) -> ChatResponseDTO:
     log.info(
         "chat_request",
+        method="POST",
+        path=CHAT_ROUTE_PREFIX,
         conversation_id=request.conversation_id,
         has_images=bool(request.images),
     )

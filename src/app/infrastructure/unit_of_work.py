@@ -3,13 +3,14 @@ from typing import Self
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.repositories.conversation import ConversationRepository
 from app.infrastructure.repositories.conversation import SQLConversationRepository
 
 log = structlog.get_logger()
 
 
 class SQLAlchemyUnitOfWork:
-    conversations: SQLConversationRepository
+    conversations: ConversationRepository
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory

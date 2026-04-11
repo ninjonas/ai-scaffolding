@@ -14,4 +14,5 @@ def describe_image(image_base64: str, question: str = "") -> str:
     prompt = "Describe this image in detail."
     if question:
         prompt = f"Regarding this image: {question}"
+    log.info("describe_image_done", description_length=len(prompt))
     return prompt

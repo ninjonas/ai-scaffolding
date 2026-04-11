@@ -1,10 +1,20 @@
 import time
 
 import structlog
-from langchain_core.messages import AIMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from app.agents.chatbot.state import ChatbotState
-from app.agents.constants import AGENT_CHATBOT, NODE_END, NODE_TOOLS, PROMPTS_DIR, RULES_DIR
+from app.agents.constants import (
+    AGENT_CHATBOT,
+    NODE_END,
+    NODE_TOOLS,
+    PROMPT_GLOB_RULES,
+    PROMPT_OUTPUT_FORMAT,
+    PROMPT_PERSONA,
+    PROMPT_SYSTEM,
+    PROMPTS_DIR,
+    RULES_DIR,
+)
 from app.agents.skills.analyze_image.tools import describe_image
 from app.agents.skills.calculator.tools import calculate
 from app.agents.skills.file_ops.tools import list_directory, read_file
@@ -25,10 +35,10 @@ ALL_TOOLS = [
 
 
 def _build_system_prompt() -> str:
-    system = (PROMPTS_DIR / "system.md").read_text()
-    persona = (PROMPTS_DIR / AGENT_CHATBOT / "persona.md").read_text()
-    output_fmt = (PROMPTS_DIR / "output_format.md").read_text()
-    rules = [p.read_text() for p in sorted(RULES_DIR.glob("*.md"))]
+    system = (PROMPTS_DIR / PROMPT_SYSTEM).read_text()
+    persona = (PROMPTS_DIR / AGENT_CHATBOT / PROMPT_PERSONA).read_text()
+    output_fmt = (PROMPTS_DIR / PROMPT_OUTPUT_FORMAT).read_text()
+    rules = [p.read_text() for p in sorted(RULES_DIR.glob(PROMPT_GLOB_RULES))]
 
     catalog = build_skill_catalog()
     skill_list = "\n".join(f"- **{s['name']}**: {s['description']}" for s in catalog)
@@ -45,7 +55,26 @@ async def invoke_llm(state: ChatbotState, llm) -> dict:
     if state.get("skill_context"):
         system_prompt += f"\n\n## Loaded Skill Context\n\n{state['skill_context']}"
 
-    messages = [SystemMessage(content=system_prompt), *state["messages"]]
+    chat_messages = list(state["messages"])
+    images = state.get("images") or []
+    if images:
+        log.info("chatbot_attaching_images", count=len(images))
+        last_human = next(
+            (i for i in range(len(chat_messages) - 1, -1, -1)
+             if isinstance(chat_messages[i], HumanMessage)),
+            None,
+        )
+        if last_human is not None:
+            text = chat_messages[last_human].content or ""
+            content_parts = [{"type": "text", "text": text}]
+            for img in images:
+                content_parts.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{img}"},
+                })
+            chat_messages[last_human] = HumanMessage(content=content_parts)
+
+    messages = [SystemMessage(content=system_prompt), *chat_messages]
     llm_with_tools = llm.bind_tools(ALL_TOOLS)
     start = time.monotonic()
     response = await llm_with_tools.ainvoke(messages)

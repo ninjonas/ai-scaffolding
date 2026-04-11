@@ -37,6 +37,17 @@ SKIP_PATTERNS = ["__pycache__", "node_modules", "dist", ".pyc"]
 # Minimum length for a string to be considered
 MIN_STRING_LENGTH = 2
 
+# Strings that are intentional pairs (e.g. a field default and a named constant
+# that happen to share the same value). These are excluded from duplicate checks.
+EXEMPT_LITERALS = {
+    "INFO",         # config.py log_level default + logging.py configure_logging default
+    "messages",     # ORM relationship names (unavoidable SQLAlchemy backref pattern)
+    "args",
+    "assets",
+    "llm",
+    "tool_calls",
+}
+
 # Strings to always ignore
 IGNORE_STRINGS = {
     "__all__",
@@ -118,6 +129,8 @@ def should_ignore_string(value: str) -> bool:
     if len(value) < MIN_STRING_LENGTH:
         return True
     if value in IGNORE_STRINGS:
+        return True
+    if value in EXEMPT_LITERALS:
         return True
     if value.strip().isdigit():
         return True

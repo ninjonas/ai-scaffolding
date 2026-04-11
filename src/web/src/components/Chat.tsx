@@ -7,6 +7,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   toolCalls?: ToolCall[];
+  images?: string[];
 }
 
 export function Chat() {
@@ -21,7 +22,11 @@ export function Chat() {
   }, [messages]);
 
   const handleSend = async (content: string, images: string[]) => {
-    const userMessage: ChatMessage = { role: 'user', content };
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content,
+      images: images.length > 0 ? images : undefined,
+    };
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
     setError(undefined);
@@ -59,9 +64,15 @@ export function Chat() {
           <div className="chat-empty">Send a message to start a conversation.</div>
         )}
         {messages.map((msg, i) => (
-          <MessageBubble key={i} role={msg.role} content={msg.content} toolCalls={msg.toolCalls} />
+          <MessageBubble
+            key={i}
+            role={msg.role}
+            content={msg.content}
+            toolCalls={msg.toolCalls}
+            images={msg.images}
+          />
         ))}
-        {loading && <MessageBubble role="assistant" content="Thinking..." loading />}
+        {loading && <MessageBubble role="assistant" content="" loading />}
         {error && <div className="chat-error">{error}</div>}
         <div ref={messagesEndRef} />
       </div>

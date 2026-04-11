@@ -72,7 +72,7 @@ docs-build *args:
     just -f scripts/docs.just build {{args}}
 
 # ── Checks ────────────────────────────────────────
-check: check-lines check-di check-literal-strings
+check: check-lines check-di check-literal-strings check-mapper-patterns check-service-patterns
 
 check-lines *args:
     just -f scripts/check.just lines {{args}}
@@ -82,6 +82,16 @@ check-di *args:
 
 check-literal-strings *args:
     just -f scripts/check.just literal-strings {{args}}
+
+check-mapper-patterns *args:
+    just -f scripts/check.just mapper-patterns {{args}}
+
+check-service-patterns *args:
+    just -f scripts/check.just service-patterns {{args}}
+
+# ── Code Review ───────────────────────────────────
+code-review *args:
+    just -f scripts/review.just code {{args}}
 
 # ── Code generation ───────────────────────────────
 gen-types:
@@ -105,3 +115,7 @@ bsc:
 # ── Setup ─────────────────────────────────────────
 setup:
     just -f scripts/setup.just all
+
+# ── Fork ──────────────────────────────────────
+fork *args:
+    just -f scripts/fork.just fork {{args}}

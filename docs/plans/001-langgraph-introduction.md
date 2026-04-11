@@ -15,11 +15,11 @@
 - [x] **Phase 5**: API layer — DTOs (camelCase), ChatMapper, routes (health + chat), main.py rewritten with lifespan
 - [x] **Phase 6**: Frontend chat UI — Chat, ChatInput, MessageBubble components, image upload, tool call display
 
-*Note: Phase 7 rules/skills creation skipped — Claude rules already existed in `.claude/rules/`.*
+*Note: Phase 7 did not add standalone Claude rules or skills; `.claude/rules/` was already in place.*
 
 ## Overview
 
-Add a LangGraph-based agent system to the scaffolding project, with a starter chatbot that analyzes images, uses tools, and delegates to subagents. The architecture follows PofEAA patterns (service layer, repository, data mapper, DTOs) and mimics Claude Code's `.claude/` pattern for prompt/skill/rule management.
+This plan adds a LangGraph agent stack: a starter chatbot that analyzes images, uses tools, and delegates to subagents. The Python side uses PofEAA (service layer, repository, data mapper, DTOs). Prompts, skills, and rules mirror Claude Code's `.claude/` layout.
 
 ## Decisions Made
 

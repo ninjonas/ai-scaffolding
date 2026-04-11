@@ -3,7 +3,17 @@ import time
 import structlog
 from langchain_core.messages import AIMessage, SystemMessage
 
-from app.agents.constants import AGENT_RESEARCHER, NODE_END, NODE_TOOLS, PROMPTS_DIR, RULES_DIR
+from app.agents.constants import (
+    AGENT_RESEARCHER,
+    NODE_END,
+    NODE_TOOLS,
+    PROMPT_GLOB_RULES,
+    PROMPT_OUTPUT_FORMAT,
+    PROMPT_PERSONA,
+    PROMPT_SYSTEM,
+    PROMPTS_DIR,
+    RULES_DIR,
+)
 from app.agents.researcher.state import ResearcherState
 from app.agents.skills.web_search.tools import search_web
 
@@ -13,10 +23,10 @@ RESEARCHER_TOOLS = [search_web]
 
 
 def _build_system_prompt() -> str:
-    system = (PROMPTS_DIR / "system.md").read_text()
-    persona = (PROMPTS_DIR / AGENT_RESEARCHER / "persona.md").read_text()
-    output_fmt = (PROMPTS_DIR / "output_format.md").read_text()
-    rules = [p.read_text() for p in sorted(RULES_DIR.glob("*.md"))]
+    system = (PROMPTS_DIR / PROMPT_SYSTEM).read_text()
+    persona = (PROMPTS_DIR / AGENT_RESEARCHER / PROMPT_PERSONA).read_text()
+    output_fmt = (PROMPTS_DIR / PROMPT_OUTPUT_FORMAT).read_text()
+    rules = [p.read_text() for p in sorted(RULES_DIR.glob(PROMPT_GLOB_RULES))]
     return "\n\n".join([system, persona, *rules, output_fmt])
 
 

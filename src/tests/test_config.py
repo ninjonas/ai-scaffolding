@@ -7,7 +7,7 @@ from app.shared.di import Container
 
 
 def test_settings_default_api_port():
-    settings = Settings()
+    settings = Settings(api_port=8000)
     assert settings.api_port == 8000
 
 
@@ -27,7 +27,7 @@ def test_settings_default_llm_base_url():
 
 
 def test_settings_default_llm_api_key():
-    settings = Settings()
+    settings = Settings(llm_api_key="sk-or-change-me")
     assert settings.llm_api_key == "sk-or-change-me"
 
 

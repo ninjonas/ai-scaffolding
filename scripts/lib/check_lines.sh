@@ -87,8 +87,38 @@ for file in "${files[@]}"; do
     rel_path="${file#"$REPO_ROOT/"}"
 
     awk -v rel_path="$rel_path" -v max="$METHOD_MAX" -v warn="$METHOD_WARN" '
-    /^[[:space:]]*def [a-zA-Z_]/ {
-        if (func_name != "" && func_lines > 0) {
+    function first_param_open(line,    start) {
+        if (!match(line, /def[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*\(/)) return 0
+        return RSTART + RLENGTH - 1
+    }
+    function paren_delta_from(line, pos,    i, c, d) {
+        d = 0
+        for (i = pos; i <= length(line); i++) {
+            c = substr(line, i, 1)
+            if (c == "(") d++
+            if (c == ")") d--
+        }
+        return d
+    }
+    function paren_delta_line(line,    i, c, d) {
+        d = 0
+        for (i = 1; i <= length(line); i++) {
+            c = substr(line, i, 1)
+            if (c == "(") d++
+            if (c == ")") d--
+        }
+        return d
+    }
+    function header_complete_after_sig(line,    i, last_rp) {
+        last_rp = 0
+        for (i = 1; i <= length(line); i++) {
+            if (substr(line, i, 1) == ")") last_rp = i
+        }
+        if (last_rp == 0) return 0
+        return (substr(line, last_rp) ~ /^\)[[:space:]]*(->.*)?:/)
+    }
+    /^[[:space:]]*def[[:space:]]+[a-zA-Z_]/ {
+        if (func_name != "" && func_lines > 0 && !in_sig) {
             printf "%s:%d:%s:%d\n", rel_path, func_start, func_name, func_lines
         }
         # Extract function name: find "def " then grab the word after it
@@ -101,15 +131,53 @@ for file in "${files[@]}"; do
         # Capture indentation of the def line
         match($0, /^[[:space:]]*/)
         func_indent = RLENGTH
+        op = first_param_open($0)
+        if (op > 0) {
+            sig_depth = paren_delta_from($0, op)
+        } else {
+            sig_depth = 0
+        }
+        if (sig_depth == 0 && header_complete_after_sig($0)) {
+            in_sig = 0
+        } else {
+            in_sig = 1
+        }
         next
     }
-    func_name != "" {
+    /^[[:space:]]*class[[:space:]]+[A-Za-z_]/ {
+        if (func_name != "" && !in_sig) {
+            match($0, /^[[:space:]]*/)
+            if (RLENGTH <= func_indent) {
+                if (func_lines > 0) {
+                    printf "%s:%d:%s:%d\n", rel_path, func_start, func_name, func_lines
+                }
+                func_name = ""
+                func_lines = 0
+                next
+            }
+        } else {
+            next
+        }
+    }
+    func_name != "" && in_sig {
+        if (/^[[:space:]]*$/) next
+        if (/^[[:space:]]*#/) next
+        sig_depth += paren_delta_line($0)
+        if (sig_depth <= 0 && header_complete_after_sig($0)) {
+            in_sig = 0
+            sig_depth = 0
+        }
+        next
+    }
+    func_name != "" && !in_sig {
         if (/^[[:space:]]*$/) next
         if (/^[[:space:]]*#/) next
         match($0, /^[[:space:]]*/)
         cur_indent = RLENGTH
         if (cur_indent <= func_indent) {
-            printf "%s:%d:%s:%d\n", rel_path, func_start, func_name, func_lines
+            if (func_lines > 0) {
+                printf "%s:%d:%s:%d\n", rel_path, func_start, func_name, func_lines
+            }
             func_name = ""
             func_lines = 0
         } else {
@@ -117,7 +185,7 @@ for file in "${files[@]}"; do
         }
     }
     END {
-        if (func_name != "" && func_lines > 0) {
+        if (func_name != "" && func_lines > 0 && !in_sig) {
             printf "%s:%d:%s:%d\n", rel_path, func_start, func_name, func_lines
         }
     }

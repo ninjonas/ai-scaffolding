@@ -29,3 +29,14 @@ See [docs/SETUP.md](docs/SETUP.md) for a detailed walkthrough.
 | Restart dev       | `just dev-restart` |
 | Start docs        | `just docs-start`  |
 | First-time setup  | `just setup`       |
+| Fork this repo    | `just fork`        |
+
+## Forking
+
+`just fork` creates a copy of this repo as a sibling directory with all references to "scaffolding" replaced by the name you choose. Run it with no arguments and it will prompt you interactively, or pass the name directly:
+
+```sh
+just fork my-project
+```
+
+The fork lands at `../my-project`, gets a fresh git history, and optionally creates a GitHub Enterprise repo if you have `gh` installed and authenticated.
