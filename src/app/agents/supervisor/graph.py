@@ -29,7 +29,6 @@ def create_supervisor_graph(
                 "messages": state["messages"],
                 "images": state.get("images", []),
                 "skill_context": "",
-                "knowledge_catalog": state.get("knowledge_catalog", ""),
             }
         )
         return {"messages": result["messages"]}

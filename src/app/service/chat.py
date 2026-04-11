@@ -9,6 +9,7 @@ from app.domain.entities.conversation import Conversation
 from app.domain.entities.knowledge_file import SCOPE_CONVERSATION
 from app.domain.entities.message import Message, MessageRole
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
+from app.infrastructure.vector.message_indexer import MessageIndexer
 from app.service.knowledge import KnowledgeService
 
 log = structlog.get_logger()
@@ -20,10 +21,12 @@ class ChatService:
         broker: AgentBroker,
         unit_of_work: SQLAlchemyUnitOfWork,
         knowledge_service: KnowledgeService,
+        message_indexer: MessageIndexer | None = None,
     ) -> None:
         self._broker = broker
         self._uow = unit_of_work
         self._knowledge_service = knowledge_service
+        self._message_indexer = message_indexer
 
     async def send_message(
         self,
@@ -74,6 +77,16 @@ class ChatService:
 
             await uow.conversations.save(conversation)
             await uow.commit()
+
+        if self._message_indexer:
+            await self._message_indexer.index(
+                user_message.id, content, MessageRole.USER,
+                conversation.id, user_message.created_at,
+            )
+            await self._message_indexer.index(
+                assistant_message.id, raw_content, MessageRole.ASSISTANT,
+                conversation.id, assistant_message.created_at,
+            )
 
         uploaded_files = []
         filenames = image_filenames or []

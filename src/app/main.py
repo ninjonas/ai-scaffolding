@@ -46,6 +46,7 @@ async def lifespan(app: FastAPI):
     from app.infrastructure.vector.knowledge_indexer import KnowledgeIndexer
     from app.infrastructure.vector.knowledge_searcher import KnowledgeSearcher
     from app.infrastructure.vector.memory_searcher import MemorySearcher
+    from app.infrastructure.vector.message_indexer import MessageIndexer
 
     def knowledge_uow_factory() -> SQLAlchemyUnitOfWork:
         return SQLAlchemyUnitOfWork(session_factory)
@@ -58,6 +59,7 @@ async def lifespan(app: FastAPI):
     knowledge_indexer = KnowledgeIndexer(chroma_client, settings)
     knowledge_searcher = KnowledgeSearcher(chroma_client, settings)
     memory_searcher = MemorySearcher(chroma_client, settings)
+    message_indexer = MessageIndexer(chroma_client, settings)
 
     search_knowledge = make_search_knowledge_tool(knowledge_searcher)
     search_memory = make_search_memory_tool(memory_searcher)
@@ -72,7 +74,10 @@ async def lifespan(app: FastAPI):
         uow_factory=knowledge_uow_factory, llm=llm, indexer=knowledge_indexer
     )
     chat_service = ChatService(
-        broker=broker, unit_of_work=uow, knowledge_service=knowledge_service
+        broker=broker,
+        unit_of_work=uow,
+        knowledge_service=knowledge_service,
+        message_indexer=message_indexer,
     )
 
     _container = Container(settings=settings)
