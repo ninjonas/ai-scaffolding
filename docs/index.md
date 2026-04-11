@@ -1,5 +1,7 @@
 # Scaffolding
 
+This is an educational project, not a production template. It exists to demonstrate how to orchestrate a development team using AI agents, with a codebase structured to make those patterns visible and learnable.
+
 A monorepo with a Python (FastAPI) backend and a Vite React TypeScript frontend.
 
 ## Prerequisites

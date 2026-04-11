@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useFocusTrap } from './useFocusTrap';
 import {
   updateKnowledgeFile,
   getKnowledgeFile,
@@ -15,9 +16,15 @@ interface KnowledgeFileEditorProps {
   conversationId?: string;
   onSave: (entry?: KnowledgeCatalogEntry) => void;
   onClose: () => void;
+  onDelete?: (id: string) => void;
 }
 
-export function KnowledgeFileEditor({ fileId, onSave, onClose }: KnowledgeFileEditorProps) {
+export function KnowledgeFileEditor({
+  fileId,
+  onSave,
+  onClose,
+  onDelete,
+}: KnowledgeFileEditorProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -28,7 +35,7 @@ export function KnowledgeFileEditor({ fileId, onSave, onClose }: KnowledgeFileEd
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
   const [showUnsavedGuard, setShowUnsavedGuard] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const firstFocusRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -38,7 +45,7 @@ export function KnowledgeFileEditor({ fileId, onSave, onClose }: KnowledgeFileEd
         setName(f.name);
         setDescription(f.description ?? '');
         setTags(f.tags ?? []);
-        setContent('');
+        setContent(f.content ?? '');
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load file'))
       .finally(() => {
@@ -55,37 +62,7 @@ export function KnowledgeFileEditor({ fileId, onSave, onClose }: KnowledgeFileEd
     onClose();
   }, [dirty, onClose]);
 
-  const trapFocus = useCallback(
-    (e: KeyboardEvent) => {
-      if (!panelRef.current) return;
-      if (e.key === 'Escape') {
-        guardClose();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const focusable = panelRef.current.querySelectorAll<HTMLElement>(
-        'button, input, textarea, select, [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    },
-    [guardClose],
-  );
-
-  useEffect(() => {
-    const panel = panelRef.current;
-    if (!panel) return;
-    panel.addEventListener('keydown', trapFocus);
-    return () => panel.removeEventListener('keydown', trapFocus);
-  }, [trapFocus]);
+  const panelRef = useFocusTrap(guardClose);
 
   const mark = () => setDirty(true);
 
@@ -150,43 +127,49 @@ export function KnowledgeFileEditor({ fileId, onSave, onClose }: KnowledgeFileEd
           </button>
         </div>
 
-        {loading ? (
-          <div className="knowledge-editor-skeleton">
-            {[36, 36, 80, 120].map((h, i) => (
-              <div key={i} className="knowledge-skeleton" style={{ height: h }} />
-            ))}
-          </div>
-        ) : (
-          <EditorForm
-            nameRef={firstFocusRef}
-            name={name}
-            description={description}
-            tags={tags}
-            tagInput={tagInput}
-            content={content}
-            saving={saving}
-            error={error}
-            onNameChange={(v) => {
-              setName(v);
-              mark();
-            }}
-            onDescriptionChange={(v) => {
-              setDescription(v);
-              mark();
-            }}
-            onTagInputChange={setTagInput}
-            onAddTag={handleAddTag}
-            onRemoveTag={(tag) => {
-              setTags((p) => p.filter((t) => t !== tag));
-              mark();
-            }}
-            onContentChange={(v) => {
-              setContent(v);
-              mark();
-            }}
-            onSubmit={handleSubmit}
-          />
-        )}
+        <div className="knowledge-editor-body">
+          {loading ? (
+            <div className="knowledge-editor-skeleton">
+              {[36, 36, 80, 120].map((h, i) => (
+                <div key={i} className="knowledge-skeleton" style={{ height: h }} />
+              ))}
+            </div>
+          ) : (
+            <EditorForm
+              nameRef={firstFocusRef}
+              name={name}
+              description={description}
+              tags={tags}
+              tagInput={tagInput}
+              content={content}
+              saving={saving}
+              error={error}
+              onNameChange={(v) => {
+                setName(v);
+                mark();
+              }}
+              onDescriptionChange={(v) => {
+                setDescription(v);
+                mark();
+              }}
+              onTagInputChange={setTagInput}
+              onAddTag={handleAddTag}
+              onRemoveTag={(tag) => {
+                setTags((p) => p.filter((t) => t !== tag));
+                mark();
+              }}
+              onSubmit={handleSubmit}
+              showDeleteConfirm={showDeleteConfirm}
+              onDeleteClick={onDelete ? () => setShowDeleteConfirm(true) : undefined}
+              onDeleteConfirm={() => {
+                setShowDeleteConfirm(false);
+                onDelete?.(fileId);
+                onClose();
+              }}
+              onDeleteCancel={() => setShowDeleteConfirm(false)}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

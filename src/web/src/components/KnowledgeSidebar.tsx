@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { listKnowledgeFiles, type KnowledgeCatalogEntry } from '../api/knowledge';
+import {
+  listKnowledgeFiles,
+  deleteKnowledgeFile,
+  type KnowledgeCatalogEntry,
+} from '../api/knowledge';
 import { KnowledgeFileEditor } from './KnowledgeFileEditor';
 import { KnowledgeFileList } from './KnowledgeFileList';
 import { KnowledgeEmptyState } from './KnowledgeEmptyState';
@@ -11,11 +15,7 @@ import { CloseIcon } from './KnowledgeIcons';
 
 const ACCEPTED_TYPES = '.md,.txt,.json,.yml';
 type Scope = 'project' | 'conversation';
-interface Toast {
-  id: number;
-  message: string;
-  retry?: () => void;
-}
+type Toast = { id: number; message: string; retry?: () => void };
 interface KnowledgeSidebarProps {
   conversationId?: string;
   onClose: () => void;
@@ -85,6 +85,7 @@ export function KnowledgeSidebar({ conversationId, onClose }: KnowledgeSidebarPr
     tab,
     conversationId,
     onSuccess: handleUploadSuccess,
+    onRefresh: fetchFiles,
     onToast: addToast,
   });
 
@@ -182,6 +183,15 @@ export function KnowledgeSidebar({ conversationId, onClose }: KnowledgeSidebarPr
           conversationId={conversationId}
           onSave={handleSaveFromEditor}
           onClose={() => setShowEditor(false)}
+          onDelete={async (id) => {
+            try {
+              await deleteKnowledgeFile(id);
+              setFiles((prev) => prev.filter((f) => f.id !== id));
+              setShowEditor(false);
+            } catch {
+              addToast('Delete failed. Try again.');
+            }
+          }}
         />
       )}
     </aside>

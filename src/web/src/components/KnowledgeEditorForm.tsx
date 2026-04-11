@@ -1,4 +1,5 @@
 import { getContentPlaceholder, isMonoFileType } from './knowledgeContentHelpers';
+import { DeleteSection } from './KnowledgeDeleteSection';
 
 interface TagsEditorProps {
   tags: string[];
@@ -58,8 +59,11 @@ export interface EditorFormProps {
   onTagInputChange: (v: string) => void;
   onAddTag: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onRemoveTag: (tag: string) => void;
-  onContentChange: (v: string) => void;
   onSubmit: () => void;
+  showDeleteConfirm?: boolean;
+  onDeleteClick?: () => void;
+  onDeleteConfirm?: () => void;
+  onDeleteCancel?: () => void;
 }
 
 function EditorTextFields({
@@ -69,16 +73,9 @@ function EditorTextFields({
   content,
   onNameChange,
   onDescriptionChange,
-  onContentChange,
 }: Pick<
   EditorFormProps,
-  | 'nameRef'
-  | 'name'
-  | 'description'
-  | 'content'
-  | 'onNameChange'
-  | 'onDescriptionChange'
-  | 'onContentChange'
+  'nameRef' | 'name' | 'description' | 'content' | 'onNameChange' | 'onDescriptionChange'
 >) {
   return (
     <>
@@ -103,16 +100,16 @@ function EditorTextFields({
           placeholder="Brief description of this file"
         />
       </label>
-      <label className="knowledge-field-label">
+      <div className="knowledge-field-label">
         Content
-        <textarea
-          className={`knowledge-textarea${isMonoFileType(name) ? ' knowledge-textarea-mono' : ''}`}
-          value={content}
-          onChange={(e) => onContentChange(e.target.value)}
-          placeholder={getContentPlaceholder(name)}
-          rows={10}
-        />
-      </label>
+        <pre
+          className={`knowledge-content-preview${isMonoFileType(name) ? ' knowledge-textarea-mono' : ''}`}
+        >
+          {content || (
+            <span className="knowledge-content-empty">{getContentPlaceholder(name)}</span>
+          )}
+        </pre>
+      </div>
     </>
   );
 }
@@ -131,8 +128,11 @@ export function EditorForm({
   onTagInputChange,
   onAddTag,
   onRemoveTag,
-  onContentChange,
   onSubmit,
+  showDeleteConfirm,
+  onDeleteClick,
+  onDeleteConfirm,
+  onDeleteCancel,
 }: EditorFormProps) {
   return (
     <>
@@ -143,7 +143,6 @@ export function EditorForm({
         content={content}
         onNameChange={onNameChange}
         onDescriptionChange={onDescriptionChange}
-        onContentChange={onContentChange}
       />
       <TagsEditor
         tags={tags}
@@ -156,6 +155,12 @@ export function EditorForm({
       <button className="knowledge-submit-btn" onClick={onSubmit} disabled={saving}>
         {saving ? 'Saving...' : 'Save'}
       </button>
+      <DeleteSection
+        showDeleteConfirm={showDeleteConfirm}
+        onDeleteClick={onDeleteClick}
+        onDeleteConfirm={onDeleteConfirm}
+        onDeleteCancel={onDeleteCancel}
+      />
     </>
   );
 }
