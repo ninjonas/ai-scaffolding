@@ -35,7 +35,8 @@ class KnowledgeService:
         log.info("knowledge_index_start", file_id=file.id)
         try:
             chunks = await self._indexer.index(
-                file.id, file.name, file.content, file.file_type, file.scope, file.conversation_id
+                file.id, file.name, file.content, file.file_type, file.scope,
+                file.conversation_id, file.description, file.tags,
             )
             log.info("knowledge_index_done", file_id=file.id, chunk_count=chunks)
         except Exception as exc:
@@ -162,6 +163,9 @@ class KnowledgeService:
                     )
                     await uow.knowledge.save(enriched)
                     await uow.commit()
+                    if self._indexer is not None:
+                        await self._indexer.delete(file_id)
+                        await self._index(enriched)
             log.info("knowledge_enrich_done", file_id=file_id, llm_used=bool(name))
         except Exception as exc:
             log.warning("knowledge_enrich_error", file_id=file_id, error=str(exc), exc_info=exc)

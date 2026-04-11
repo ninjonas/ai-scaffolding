@@ -1,6 +1,10 @@
 import pytest
 
-from app.agents.tools.knowledge import make_search_knowledge_tool
+from app.agents.tools.knowledge import (
+    CONTEXT_FRAMING,
+    HIGH_CONFIDENCE_SCORE,
+    make_search_knowledge_tool,
+)
 from app.domain.entities.knowledge_file import SCOPE_PROJECT
 
 
@@ -43,3 +47,24 @@ async def test_search_knowledge_multiple_results_ranked():
     assert "2." in output
     assert "Doc A" in output
     assert "Doc B" in output
+
+
+@pytest.mark.asyncio
+async def test_high_score_result_shows_excerpt():
+    score = HIGH_CONFIDENCE_SCORE + 0.1
+    results = [{"name": "Doc", "score": score, "excerpt": "Full excerpt here"}]
+    tool = make_search_knowledge_tool(_FakeSearcher(results))
+    output = await tool.ainvoke({"query": "q"})
+    assert CONTEXT_FRAMING in output
+    assert "Full excerpt here" in output
+
+
+@pytest.mark.asyncio
+async def test_low_score_result_hides_excerpt():
+    score = HIGH_CONFIDENCE_SCORE - 0.1
+    results = [{"name": "Weak Doc", "score": score, "excerpt": "Hidden text"}]
+    tool = make_search_knowledge_tool(_FakeSearcher(results))
+    output = await tool.ainvoke({"query": "q"})
+    assert "Weak Doc" in output
+    assert "Hidden text" not in output
+    assert "low confidence" in output

@@ -46,7 +46,8 @@ async def backfill_knowledge(
             log.info("dry_run_knowledge", file_id=f.id, name=f.name)
             continue
         chunk_count = await indexer.index(
-            f.id, f.name, f.content, f.file_type, f.scope, f.conversation_id
+            f.id, f.name, f.content, f.file_type, f.scope, f.conversation_id,
+            f.description, f.tags,
         )
         log.info("backfill_knowledge_indexed", file_id=f.id, chunk_count=chunk_count)
         indexed += 1

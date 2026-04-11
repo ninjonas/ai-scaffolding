@@ -11,6 +11,7 @@ from langchain_core.runnables import RunnableLambda
 
 from app.service.knowledge_frontmatter_llm import (
     KnowledgeFrontmatterSchema,
+    llm_describe_image,
     llm_generate,
 )
 
@@ -70,6 +71,41 @@ async def test_llm_generate_returns_name_description_tags() -> None:
 async def test_llm_generate_returns_empty_on_llm_exception() -> None:
     llm = StructuredOutputLLM(schema_result=None, should_raise=True)
     result = await llm_generate("some content", "json", llm)
+    assert result == ("", "", [])
+
+
+def test_coerce_tags_splits_comma_string() -> None:
+    schema = KnowledgeFrontmatterSchema(
+        name="Test", description="Desc", tags="python, ml, data"
+    )
+    assert schema.tags == ["python", "ml", "data"]
+
+
+def test_coerce_tags_passes_list_through() -> None:
+    schema = KnowledgeFrontmatterSchema(
+        name="Test", description="Desc", tags=["a", "b"]
+    )
+    assert schema.tags == ["a", "b"]
+
+
+@pytest.mark.asyncio
+async def test_llm_describe_image_returns_name_description_tags() -> None:
+    schema = KnowledgeFrontmatterSchema(
+        name="Sunset Over Mountains",
+        description="A vivid landscape photograph showing a sunset over a mountain range.",
+        tags=["landscape", "sunset", "mountains", "photography"],
+    )
+    llm = StructuredOutputLLM(schema_result=schema)
+    name, description, tags = await llm_describe_image("base64data", "png", llm)
+    assert name == "Sunset Over Mountains"
+    assert "sunset" in description.lower()
+    assert tags == ["landscape", "sunset", "mountains", "photography"]
+
+
+@pytest.mark.asyncio
+async def test_llm_describe_image_returns_empty_on_failure() -> None:
+    llm = StructuredOutputLLM(schema_result=None, should_raise=True)
+    result = await llm_describe_image("base64data", "png", llm)
     assert result == ("", "", [])
 
 

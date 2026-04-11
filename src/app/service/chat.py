@@ -6,7 +6,7 @@ import structlog
 from app.agents.orchestrator import AgentBroker
 from app.agents.tools.image import optimize_images_b64
 from app.domain.entities.conversation import Conversation
-from app.domain.entities.knowledge_file import SCOPE_CONVERSATION
+from app.domain.entities.knowledge_file import SCOPE_CONVERSATION, KnowledgeFile
 from app.domain.entities.message import Message, MessageRole
 from app.infrastructure.mappers.message_index import MessageIndexMapper
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
@@ -15,6 +15,21 @@ from app.service.knowledge import KnowledgeService
 from app.shared.field_keys import FIELD_KEY_INTERRUPT, FIELD_KEY_INTERRUPT_TYPE
 
 log = structlog.get_logger()
+
+KNOWLEDGE_CONTEXT_HEADER = "\n\n[Available knowledge files in this conversation:]"
+KNOWLEDGE_NO_DESCRIPTION = "No description"
+KNOWLEDGE_FILE_LINE = '- "{name}": {desc}'
+
+
+def _build_knowledge_context(files: list[KnowledgeFile]) -> str:
+    """Build a plain-text summary of conversation knowledge files."""
+    if not files:
+        return ""
+    lines = [KNOWLEDGE_CONTEXT_HEADER]
+    for f in files:
+        desc = f.description or KNOWLEDGE_NO_DESCRIPTION
+        lines.append(KNOWLEDGE_FILE_LINE.format(name=f.name, desc=desc))
+    return "\n".join(lines)
 
 
 class ChatService:
@@ -59,10 +74,21 @@ class ChatService:
             )
             conversation.add_message(user_message)
 
+            knowledge_files = await self._knowledge_service.list(
+                scope=SCOPE_CONVERSATION, conversation_id=conversation.id,
+            )
+            knowledge_context = _build_knowledge_context(knowledge_files)
+            log.info(
+                "knowledge_context_attached",
+                conversation_id=conversation.id,
+                knowledge_file_count=len(knowledge_files),
+            )
+
             response = await self._broker.chat_response(
                 content,
                 optimized,
                 conversation_id=conversation.id,
+                knowledge_context=knowledge_context,
                 message_count=len(conversation.messages),
             )
 
@@ -137,7 +163,9 @@ class ChatService:
         log.info("resume_complete", conversation_id=conversation_id)
         return result
 
-    async def _get_or_create(self, uow, conversation_id: str | None) -> Conversation:
+    async def _get_or_create(
+        self, uow, conversation_id: str | None,
+    ) -> Conversation:
         log.debug("get_or_create_conversation", conversation_id=conversation_id)
         if conversation_id:
             convo = await uow.conversations.get_by_id(conversation_id)

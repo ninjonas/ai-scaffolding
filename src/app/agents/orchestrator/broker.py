@@ -30,6 +30,7 @@ class AgentBroker:
         content: str,
         images: list[str] | None = None,
         conversation_id: str | None = None,
+        knowledge_context: str = "",
         **context: Any,
     ) -> dict:
         """Invoke chat agent with domain-level parameters.
@@ -38,13 +39,15 @@ class AgentBroker:
             content: User message text.
             images: Optional list of base64-encoded images.
             conversation_id: Optional conversation ID; used as LangGraph thread_id.
+            knowledge_context: Plain-text summary of conversation knowledge files.
             **context: Additional context forwarded as structured log fields.
 
         Returns:
             Dict with 'content' and 'tool_calls' keys.
         """
+        augmented = content + knowledge_context if knowledge_context else content
         state_dict = {
-            "messages": [{"role": "user", "content": content}],
+            "messages": [{"role": "user", "content": augmented}],
             "images": images or [],
         }
         config = {"configurable": {"thread_id": conversation_id}} if conversation_id else None

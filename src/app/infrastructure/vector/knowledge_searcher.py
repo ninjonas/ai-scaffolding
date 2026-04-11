@@ -4,6 +4,7 @@ from typing import Any
 
 import structlog
 
+from app.domain.entities.knowledge_file import SCOPE_CONVERSATION, SCOPE_PROJECT
 from app.infrastructure.database import TABLE_KNOWLEDGE_FILES
 from app.shared.field_keys import (
     CHROMA_RESULT_IDS,
@@ -13,6 +14,25 @@ from app.shared.field_keys import (
 )
 
 log = structlog.get_logger()
+
+MIN_RELEVANCE_SCORE = 0.3
+
+
+def build_search_filter(scope: str, conversation_id: str | None = None) -> dict:
+    """Build the ChromaDB ``where`` filter for a knowledge search.
+
+    When *scope* is ``conversation``, returns an ``$or`` filter that includes
+    both conversation-scoped docs (filtered by *conversation_id*) **and**
+    project-scoped docs so that project knowledge is always visible.
+    """
+    if scope == SCOPE_CONVERSATION and conversation_id:
+        return {
+            "$or": [
+                {"$and": [{"scope": SCOPE_CONVERSATION}, {"conversation_id": conversation_id}]},
+                {"scope": SCOPE_PROJECT},
+            ],
+        }
+    return {"scope": scope}
 
 
 class KnowledgeSearcher:
@@ -59,9 +79,7 @@ class KnowledgeSearcher:
         bound_log = log.bind(query=query[:50], scope=scope)
         bound_log.info("search_start")
 
-        where: dict = {"scope": scope}
-        if conversation_id:
-            where["conversation_id"] = conversation_id
+        where = build_search_filter(scope, conversation_id)
 
         collection = self._get_collection()
         results = collection.query(
@@ -71,21 +89,30 @@ class KnowledgeSearcher:
         )
 
         hits = []
+        seen_files: set[str] = set()
         if results and results.get(CHROMA_RESULT_IDS):
             docs = results["documents"][0]
             metas = results["metadatas"][0]
             distances = results["distances"][0]
             for doc, meta, dist in zip(docs, metas, distances, strict=False):
+                score = 1.0 - dist
+                if score < MIN_RELEVANCE_SCORE:
+                    continue
+                fid = meta.get("file_id", "")
+                if fid in seen_files:
+                    continue
+                seen_files.add(fid)
                 hits.append(
                     {
-                        "file_id": meta.get("file_id"),
+                        "file_id": fid,
                         "name": meta.get(FIELD_KEY_NAME),
                         "file_type": meta.get(FIELD_KEY_FILE_TYPE),
                         "chunk_index": meta.get("chunk_index"),
                         "excerpt": doc,
-                        "score": 1.0 - dist,
+                        "score": score,
                     }
                 )
 
-        bound_log.info("search_done", result_count=len(hits))
+        filtered = len(distances) - len(hits) if results and results.get(CHROMA_RESULT_IDS) else 0
+        bound_log.info("search_done", result_count=len(hits), filtered_below_threshold=filtered)
         return hits

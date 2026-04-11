@@ -138,6 +138,3 @@ claude-plugins:
             claude plugin install "$plugin" 1>/dev/null || true
         fi
     done <<< "$plugins"
-
-chroma-backfill *args:
-    uv run python scripts/lib/backfill_chroma.py {{args}}
