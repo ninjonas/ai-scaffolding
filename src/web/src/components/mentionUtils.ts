@@ -25,6 +25,14 @@ export function stripMentionsFromText(text: string, files: KnowledgeCatalogEntry
   return cleaned.trim();
 }
 
+export function expandMentions(text: string, files: KnowledgeCatalogEntry[]): string {
+  let result = text;
+  for (const f of files) {
+    result = result.replace(`@${shortenName(f.name)}`, `@[${f.name}]`);
+  }
+  return result;
+}
+
 export function removeMentionByName(text: string, name: string): string {
   return text
     .replace(`@${shortenName(name)}`, '')

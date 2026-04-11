@@ -1,6 +1,6 @@
 # Plan: ChromaDB RAG — Semantic Knowledge and Memory Search
 
-**Status**: Draft
+**Status**: Done
 **Date**: 2026-04-11
 **Author**: Jonas + Claude
 
@@ -64,69 +64,85 @@ src/app/
 
 ## Implementation Phases
 
-### Phase 0: LangGraph checkpointing `Not Started`
+### Phase 0: LangGraph checkpointing `Done`
 
 Required prerequisite — `interrupt()`/resume cannot function without a checkpointer.
 
-- [ ] Add `langgraph-checkpoint-sqlite` to `pyproject.toml`.
-- [ ] Create `src/app/shared/checkpointer.py`: factory returning `AsyncSqliteSaver` using a path from `Settings` (default: `./data/checkpoints.db`). Singleton per process.
-- [ ] Update graph factory in `src/app/agents/chatbot/graph.py`: compile graph with `checkpointer=get_checkpointer(settings)`.
-- [ ] Update `AgentBroker.chat_response()`: pass `config={"configurable": {"thread_id": conversation_id}}` on every `ainvoke` call so the checkpointer can save/restore state per conversation.
-- [ ] Update `POST /api/chat/{conversation_id}/resume` route (create if not exists): loads graph, calls `ainvoke` with same `thread_id` and resume payload to continue an interrupted run.
-- [ ] Verify interrupt/resume round-trip with a minimal test before proceeding to other phases.
+- [x] Add `langgraph-checkpoint-sqlite` to `pyproject.toml`.
+- [x] Create `src/app/shared/checkpointer.py`: factory returning `AsyncSqliteSaver` using a path from `Settings` (default: `./data/checkpoints.db`). Singleton per process.
+- [x] Update graph factory in `src/app/agents/chatbot/graph.py`: compile graph with `checkpointer=get_checkpointer(settings)`.
+- [x] Update `AgentBroker.chat_response()`: pass `config={"configurable": {"thread_id": conversation_id}}` on every `ainvoke` call so the checkpointer can save/restore state per conversation.
+- [x] Update `POST /api/chat/{conversation_id}/resume` route (create if not exists): loads graph, calls `ainvoke` with same `thread_id` and resume payload to continue an interrupted run.
+- [x] Verify interrupt/resume round-trip with a minimal test before proceeding to other phases.
 
-### Phase 1: ChromaDB infrastructure `Not Started`
+### Phase 1: ChromaDB infrastructure `Done`
 
-- [ ] Add `chromadb` and `openai` to `pyproject.toml` dependencies.
-- [ ] Add `CHROMA_PATH` to `Settings` (default: `./data/chroma`).
-- [ ] Create `src/app/infrastructure/vector/client.py`: factory returning a `chromadb.PersistentClient` using `settings.chroma_path`. Singleton pattern — one client per process.
-- [ ] Create `src/app/infrastructure/vector/knowledge_indexer.py`: indexes two document types per file. (1) A **summary chunk**: composed from LLM-enriched name + description + tags (`"{name}. {description} Tags: {tags}"`), always indexed for all file types. (2) **Content chunks** (text files only): raw content chunked at 512 tokens / 64-token overlap. Images get only the summary chunk; the image is a reference to its upload context. All chunks share metadata: `file_id`, `chunk_index`, `name`, `file_type`, `scope`, `conversation_id`, `doc_type` (`"summary"` or `"chunk"`). Embeds via OpenAI `text-embedding-3-small`. Upserts into `knowledge_files` collection.
-- [ ] Create `src/app/infrastructure/vector/message_indexer.py`: accepts message id, content, role, conversation_id, timestamp. Embeds via same model. Upserts into `chat_messages` collection with metadata: `message_id`, `conversation_id`, `role`, `created_at`.
-- [ ] Create `src/app/infrastructure/vector/knowledge_searcher.py`: `search(query, scope, conversation_id, top_k=5) -> list[dict]`. Queries `knowledge_files` collection. When scope is `conversation`, queries both conversation-scoped docs (filtered by conversation_id) AND project-scoped docs in a single pass using ChromaDB `$or` filter (decision 15). Deduplicates by file_id, keeping highest score.
-- [ ] Create `src/app/infrastructure/vector/memory_searcher.py`: `search(query, current_conversation_id, top_k=5) -> list[dict]`. Queries `chat_messages` collection, excludes current conversation_id, returns ranked results with conversation_id and timestamp metadata.
+- [x] Add `chromadb` and `openai` to `pyproject.toml` dependencies.
+- [x] Add `CHROMA_PATH` to `Settings` (default: `./data/chroma`).
+- [x] Create `src/app/infrastructure/vector/client.py`: factory returning a `chromadb.PersistentClient` using `settings.chroma_path`. Singleton pattern — one client per process.
+- [x] Create `src/app/infrastructure/vector/knowledge_indexer.py`: indexes two document types per file. (1) A **summary chunk**: composed from LLM-enriched name + description + tags (`"{name}. {description} Tags: {tags}"`), always indexed for all file types. (2) **Content chunks** (text files only): raw content chunked at 512 tokens / 64-token overlap. Images get only the summary chunk; the image is a reference to its upload context. All chunks share metadata: `file_id`, `chunk_index`, `name`, `file_type`, `scope`, `conversation_id`, `doc_type` (`"summary"` or `"chunk"`). Embeds via OpenAI `text-embedding-3-small`. Upserts into `knowledge_files` collection.
+- [x] Create `src/app/infrastructure/vector/message_indexer.py`: accepts message id, content, role, conversation_id, timestamp. Embeds via same model. Upserts into `chat_messages` collection with metadata: `message_id`, `conversation_id`, `role`, `created_at`.
+- [x] Create `src/app/infrastructure/vector/knowledge_searcher.py`: `search(query, scope, conversation_id, top_k=5) -> list[dict]`. Queries `knowledge_files` collection. When scope is `conversation`, queries both conversation-scoped docs (filtered by conversation_id) AND project-scoped docs in a single pass using ChromaDB `$or` filter (decision 15). Deduplicates by file_id, keeping highest score.
+- [x] Create `src/app/infrastructure/vector/memory_searcher.py`: `search(query, current_conversation_id, top_k=5) -> list[dict]`. Queries `chat_messages` collection, excludes current conversation_id, returns ranked results with conversation_id and timestamp metadata.
 
-### Phase 2: Knowledge service integration `Not Started`
+### Phase 2: Knowledge service integration `Done`
 
-- [ ] Fix `knowledge_frontmatter_llm.py`: LLM image description fails with `OutputParserException` on escaped newlines in JSON. Switch from `json_mode` to Pydantic structured output (already using `KnowledgeFrontmatterSchema`) so parsing is handled by LangChain, not manual JSON decode.
-- [ ] Update `KnowledgeService.upload()`: after saving to SQLite, call `knowledge_indexer.index(file)`. Log indexing start/done with chunk count.
-- [ ] Update `KnowledgeService.delete()`: after removing from SQLite, delete all chunks for `file_id` from `knowledge_files` ChromaDB collection.
-- [ ] Update `KnowledgeService.update()`: re-index on content change (delete old chunks, index new content).
-- [ ] Remove `get_catalog()` method and `build_knowledge_catalog()` utility — no longer used.
+- [x] Fix `knowledge_frontmatter_llm.py`: LLM image description fails with `OutputParserException` on escaped newlines in JSON. Switch from `json_mode` to Pydantic structured output (already using `KnowledgeFrontmatterSchema`) so parsing is handled by LangChain, not manual JSON decode.
+- [x] Update `KnowledgeService.upload()`: after saving to SQLite, call `knowledge_indexer.index(file)`. Log indexing start/done with chunk count.
+- [x] Update `KnowledgeService.delete()`: after removing from SQLite, delete all chunks for `file_id` from `knowledge_files` ChromaDB collection.
+- [x] Update `KnowledgeService.update()`: re-index on content change (delete old chunks, index new content).
+- [x] Remove `get_catalog()` method and `build_knowledge_catalog()` utility — no longer used.
 
-### Phase 3: Agent tools and HITL node `Not Started`
+### Phase 3: Agent tools and HITL node `Done`
 
 Node-level interrupt is used instead of tool-level to avoid the double-execution bug (on resume,
 nodes re-run from the top — a tool-level interrupt would fire the tool twice).
 
-- [ ] Replace `read_knowledge_file` tool in `src/app/agents/tools/knowledge.py` with `search_knowledge`: takes `query: str`, calls `knowledge_searcher.search()`, returns top-k chunk results formatted as a ranked list with file name, chunk excerpt, and relevance score. Always retrieves (hybrid strategy) — no agent gate on this tool.
-- [ ] Create `src/app/agents/tools/memory.py`: `search_memory` tool. Takes `query: str`. Calls `memory_searcher.search()`, stores results in state (`memory_results`), returns a sentinel string `"MEMORY_RESULTS_PENDING"`. Does NOT call `interrupt()` — that happens in the node.
-- [ ] Add `await_memory_confirm` node in `chatbot/nodes.py`: checks if `state["memory_results"]` is set. If set, calls `interrupt({"type": "memory_confirm", "results": state["memory_results"], "prompt": "..."})`. On resume, reads `memory_confirmed` from state. If approved, formats results and appends as a `SystemMessage` to messages. If denied, clears `memory_results` and continues.
-- [ ] Add conditional edge in `chatbot/graph.py`: after `run_tools`, route to `await_memory_confirm` if `memory_results` is set, else back to `invoke_llm`.
-- [ ] Update `ALL_TOOLS` in `chatbot/nodes.py`: add `search_knowledge` and `search_memory`, remove `read_knowledge_file`.
-- [ ] Update `ChatbotState` in `chatbot/state.py`: add `memory_results: list[dict]` and `memory_confirmed: bool | None` fields.
-- [ ] Remove catalog injection from `invoke_llm` in `chatbot/nodes.py`: delete `knowledge_catalog` state field read and system prompt append.
+- [x] Replace `read_knowledge_file` tool in `src/app/agents/tools/knowledge.py` with `search_knowledge`: takes `query: str`, calls `knowledge_searcher.search()`, returns top-k chunk results formatted as a ranked list with file name, chunk excerpt, and relevance score. Always retrieves (hybrid strategy) — no agent gate on this tool.
+- [x] Create `src/app/agents/tools/memory.py`: `search_memory` tool. Takes `query: str`. Calls `memory_searcher.search()`, stores results in state (`memory_results`), returns a sentinel string `"MEMORY_RESULTS_PENDING"`. Does NOT call `interrupt()` — that happens in the node.
+- [x] Add `await_memory_confirm` node in `chatbot/nodes.py`: checks if `state["memory_results"]` is set. If set, calls `interrupt({"type": "memory_confirm", "results": state["memory_results"], "prompt": "..."})`. On resume, reads `memory_confirmed` from state. If approved, formats results and appends as a `SystemMessage` to messages. If denied, clears `memory_results` and continues.
+- [x] Add conditional edge in `chatbot/graph.py`: after `run_tools`, route to `await_memory_confirm` if `memory_results` is set, else back to `invoke_llm`.
+- [x] Update `ALL_TOOLS` in `chatbot/nodes.py`: add `search_knowledge` and `search_memory`, remove `read_knowledge_file`.
+- [x] Update `ChatbotState` in `chatbot/state.py`: add `memory_results: list[dict]` and `memory_confirmed: bool | None` fields.
+- [x] Remove catalog injection from `invoke_llm` in `chatbot/nodes.py`: delete `knowledge_catalog` state field read and system prompt append.
 
-### Phase 4: Chat service integration `Not Started`
+### Phase 4: Chat service integration `Done`
 
-- [ ] Update the chat route handler in `src/app/api/routes/chat.py`: after saving messages, enqueue indexing via FastAPI `BackgroundTasks` — `background_tasks.add_task(message_indexer.index, message)` for both user and assistant messages. Indexing is fire-and-forget; response is not blocked.
-- [ ] Remove `knowledge_catalog` fetch from `ChatService.send_message()`.
-- [ ] Update `AgentBroker.chat_response()`: remove `knowledge_catalog` parameter.
-- [ ] Remove `knowledge_catalog` field from `ChatbotState`.
-- [ ] Update `KnowledgeService.upload()` route handler similarly: enqueue `knowledge_indexer.index` via `BackgroundTasks` after the file is saved to SQLite.
+- [x] Update the chat route handler in `src/app/api/routes/chat.py`: after saving messages, enqueue indexing via FastAPI `BackgroundTasks` — `background_tasks.add_task(message_indexer.index, message)` for both user and assistant messages. Indexing is fire-and-forget; response is not blocked.
+- [x] Remove `knowledge_catalog` fetch from `ChatService.send_message()`.
+- [x] Update `AgentBroker.chat_response()`: remove `knowledge_catalog` parameter.
+- [x] Remove `knowledge_catalog` field from `ChatbotState`.
+- [x] Update `KnowledgeService.upload()` route handler similarly: enqueue `knowledge_indexer.index` via `BackgroundTasks` after the file is saved to SQLite.
 
-### Phase 5: Frontend HITL confirmation UI `Not Started`
+### Phase 5: Frontend HITL confirmation UI `Done`
 
-- [ ] Detect `interrupt` event in the chat stream response (backend signals interrupt via a new SSE event type `memory_confirm`).
-- [ ] When `memory_confirm` arrives, render an inline confirmation card in the chat thread showing: "I found relevant context from past conversations. Use it?" with a summary of the top results (conversation date, excerpt), and Approve / Skip buttons.
-- [ ] On Approve: send `POST /api/chat/{id}/resume` with `approved: true`. On Skip: send with `approved: false`.
-- [ ] Add `POST /api/chat/{conversation_id}/resume` route in `src/app/api/routes/chat.py` that resumes the interrupted LangGraph run.
-- [ ] Show a subtle "Searching memory..." indicator in the chat while the agent is running the relevance check (before the interrupt fires).
+- [x] Detect `interrupt` event in the chat stream response (backend signals interrupt via a new SSE event type `memory_confirm`).
+- [x] When `memory_confirm` arrives, render an inline confirmation card in the chat thread showing: "I found relevant context from past conversations. Use it?" with a summary of the top results (conversation date, excerpt), and Approve / Skip buttons.
+- [x] On Approve: send `POST /api/chat/{id}/resume` with `approved: true`. On Skip: send with `approved: false`.
+- [x] Add `POST /api/chat/{conversation_id}/resume` route in `src/app/api/routes/chat.py` that resumes the interrupted LangGraph run.
+- [x] Show a subtle "Searching memory..." indicator in the chat while the agent is running the relevance check (before the interrupt fires).
 
-### Phase 6: Backfill existing data `Not Started`
+### Phase 7: OpenRouter embeddings fix `Done`
 
-- [ ] Create `scripts/lib/backfill_chroma.py`: loads all `KnowledgeFile` records from SQLite, indexes each into `knowledge_files` collection. Loads all `Message` records, indexes into `chat_messages` collection. Idempotent (upsert). Logs progress.
-- [ ] Add `just chroma-backfill` recipe in `scripts/setup.just` delegating to `backfill_chroma.py`.
-- [ ] Document backfill step in `README.md` under setup.
+Bug fix discovered during integration testing: embedding calls failed because the OpenRouter base URL wasn't wired through to the embeddings client.
+
+- [x] Wire OpenRouter `base_url` from LLM factory settings into the embeddings client configuration.
+- [x] Harden RAG pipeline error handling for embedding failures.
+
+### Phase 8: Multi-vector RAG indexing with LLM-enriched metadata `Done`
+
+Implementation of decision 14 (Multi-Vector Retriever pattern). LLM-generated metadata (name, description, tags) becomes the primary searchable document, with raw content chunks as secondary detail vectors.
+
+- [x] Update `knowledge_indexer` to generate summary chunks from LLM-enriched frontmatter.
+- [x] Implement scope fallback search (decision 15): conversation queries also search project-scoped docs.
+- [x] Index text files with both summary and content chunks; images with summary only.
+
+### Phase 9: Chat UX polish `Done`
+
+Frontend improvements to the chat experience, built on top of the core RAG feature.
+
+- [x] Inline @mention UX with shortened names, hover dismiss, and auto-focus for knowledge file references.
+- [x] Render assistant messages with markdown formatting (headings, lists, code blocks, links).
 
 ## Agent Execution Strategy
 
@@ -140,7 +156,9 @@ nodes re-run from the top — a tool-level interrupt would fire the tool twice).
 | 3     | 0, 1       | backend    | Needs checkpointer (Phase 0) and searcher (Phase 1)       |
 | 4     | 2, 3       | backend    | Needs updated service (Phase 2) and tools/nodes (Phase 3) |
 | 5     | Phase 4    | frontend   | Needs resume route and SSE event from Phase 4             |
-| 6     | Phase 1    | backend    | Independent of Phases 2-5, can run parallel with Phase 2  |
+| 7     | Phase 1    | backend    | Bug fix: OpenRouter embedding base URL wiring             |
+| 8     | Phase 1    | backend    | Multi-vector RAG indexing with LLM-enriched metadata      |
+| 9     | Phase 5    | frontend   | Chat UX polish: @mentions and markdown rendering          |
 
 ### Sequencing constraints
 
@@ -149,7 +167,8 @@ nodes re-run from the top — a tool-level interrupt would fire the tool twice).
 - Phases 2 and 3 can run in parallel once their respective prerequisites complete.
 - Phase 4 blocks on both Phase 2 and Phase 3.
 - Phase 5 (frontend) blocks on Phase 4 (needs the resume endpoint and SSE event).
-- Phase 6 (backfill) only needs Phase 1 and can run concurrently with Phases 2-4.
+- Phase 7 (embeddings fix) needed Phase 1 infra.
+- Phases 8-9 (RAG indexing polish, chat UX) ran after core integration was stable.
 
 ### Agent instructions
 
@@ -169,8 +188,9 @@ nodes re-run from the top — a tool-level interrupt would fire the tool twice).
 - **Frontend agent (Phase 5)**: Add `memory_confirm` SSE event handling. Inline confirmation card
   in the chat thread. Approve/Skip buttons call the resume endpoint. Match existing chat UI
   patterns and motion conventions from plan 005.
-- **Backend agent (Phase 6)**: Backfill script only. Idempotent upserts. Progress logging.
-  No production code changes.
+- **Backend agent (Phase 7)**: Bug fix for OpenRouter embedding base URL wiring.
+- **Backend agent (Phase 8)**: Multi-vector RAG indexing with LLM-enriched metadata per decision 14-15.
+- **Frontend agent (Phase 9)**: Chat UX polish: inline @mention UX and markdown rendering.
 
 ## Key Patterns
 
@@ -286,3 +306,5 @@ No new dependencies.
 | 2026-04-11 | Jonas + Claude | Initial draft                                                                                                                                                                                                          |
 | 2026-04-11 | Claude         | Architecture review: added Phase 0 (checkpointing), node-level HITL pattern, hybrid RAG strategy, BackgroundTasks for indexing, resolved 3 open questions                                                              |
 | 2026-04-11 | Jonas + Claude | Added decisions 14-15: LLM-enriched metadata as primary indexable content (Multi-Vector pattern), scope fallback for conversation search. Updated Phase 1 indexer/searcher tasks. Added LLM JSON parse fix to Phase 2. |
+| 2026-04-11 | Jonas + Claude | Marked Phases 0-5 as Done. Added Phase 7 (OpenRouter embeddings fix), Phase 8 (multi-vector RAG indexing), Phase 9 (chat UX polish) as completed work beyond original plan.                                            |
+| 2026-04-11 | Jonas + Claude | Removed Phase 6 (backfill): not needed. Deleted `scripts/lib/backfill_chroma.py`, `just chroma-backfill` recipe, and `just db-backfill` delegate. Status set to Done.                                                  |

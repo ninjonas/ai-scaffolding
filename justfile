@@ -127,9 +127,6 @@ fork *args:
 db-reset:
     just -f scripts/db.just reset
 
-db-backfill *args:
-    just -f scripts/db.just chroma-backfill {{args}}
-
 db-tables:
     just -f scripts/db.just tables
 

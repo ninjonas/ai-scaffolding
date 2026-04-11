@@ -6,10 +6,6 @@ reset:
     rm -rf data/chroma
     @echo "All databases deleted. They will be recreated on next app start."
 
-# Backfill ChromaDB from SQLite
-chroma-backfill *args:
-    uv run python scripts/lib/backfill_chroma.py {{args}}
-
 # Open SQLite shell
 sqlite *args:
     sqlite3 data/app.db {{args}}

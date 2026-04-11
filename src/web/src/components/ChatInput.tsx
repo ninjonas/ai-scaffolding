@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
 import { BookIcon, PaperclipIcon, SendArrowIcon } from './ChatInputIcons';
 import { KnowledgeMentionDropdown } from './KnowledgeMentionDropdown';
 import { MentionHighlight } from './MentionHighlight';
+import { useAutoResize } from './useAutoResize';
+import { useImageAttachments, type AttachedImage } from './useImageAttachments';
 import { useMentionState } from './useMentionState';
 
-export interface AttachedImage {
-  dataUrl: string;
-  filename: string;
-}
+export type { AttachedImage };
 
 interface ChatInputProps {
   onSend: (
@@ -21,7 +20,6 @@ interface ChatInputProps {
   conversationId?: string;
 }
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const LISTBOX_ID = 'mention-listbox';
 
 export function ChatInput({
@@ -31,25 +29,35 @@ export function ChatInput({
   knowledgeOpen,
   conversationId,
 }: ChatInputProps) {
-  const [images, setImages] = useState<AttachedImage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mention = useMentionState({ conversationId, textareaRef });
+  const imgAttach = useImageAttachments();
+  useAutoResize(textareaRef, mention.message);
 
   useEffect(() => {
     if (!disabled) textareaRef.current?.focus();
   }, [disabled]);
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  const syncOverlayScroll = useCallback(() => {
+    const ta = textareaRef.current;
+    const overlay = overlayRef.current;
+    if (ta && overlay) overlay.scrollTop = ta.scrollTop;
+  }, []);
+
   const handleSend = () => {
     const trimmed = mention.message.trim();
     if (!trimmed) return;
+    const expanded = mention.expandMentions(trimmed);
     onSend(
-      trimmed,
-      images,
+      expanded,
+      imgAttach.images,
       mention.attachedFiles.map((f) => ({ id: f.id, name: f.name })),
     );
     mention.setMessage('');
-    setImages([]);
+    imgAttach.clearImages();
     mention.resetMention();
   };
 
@@ -70,15 +78,8 @@ export function ChatInput({
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    Array.from(files).forEach((file) => {
-      if (file.size > MAX_IMAGE_SIZE) return;
-      const reader = new FileReader();
-      reader.onload = () =>
-        setImages((prev) => [...prev, { dataUrl: reader.result as string, filename: file.name }]);
-      reader.readAsDataURL(file);
-    });
+    if (e.target.files) imgAttach.addFiles(e.target.files);
+    textareaRef.current?.focus();
   };
 
   const activeDescendant =
@@ -99,15 +100,12 @@ export function ChatInput({
         />
       )}
 
-      {images.length > 0 && (
+      {imgAttach.images.length > 0 && (
         <div className="attachments-preview">
-          {images.map((img, i) => (
+          {imgAttach.images.map((img, i) => (
             <div key={i} className="image-preview">
               <img src={img.dataUrl} alt={img.filename} />
-              <button
-                aria-label="Remove image"
-                onClick={() => setImages((p) => p.filter((_, j) => j !== i))}
-              >
+              <button aria-label="Remove image" onClick={() => imgAttach.removeImage(i)}>
                 &times;
               </button>
             </div>
@@ -149,7 +147,7 @@ export function ChatInput({
         />
         <div className="textarea-wrapper">
           {mention.attachedFiles.length > 0 && (
-            <div className="mention-overlay">
+            <div ref={overlayRef} className="mention-overlay">
               <MentionHighlight
                 message={mention.message}
                 attachedFiles={mention.attachedFiles}
@@ -163,6 +161,7 @@ export function ChatInput({
             value={mention.message}
             onChange={mention.handleTextChange}
             onKeyDown={handleKeyDown}
+            onScroll={syncOverlayScroll}
             placeholder="Type a message... (@ to mention a knowledge file)"
             disabled={disabled}
             rows={1}

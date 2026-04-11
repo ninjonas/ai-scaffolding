@@ -11,6 +11,7 @@ import {
   MAX_DROPDOWN_ITEMS,
   fuzzyMatch,
   stripMentionsFromText,
+  expandMentions,
   removeMentionByName,
   collapseSpaces,
   findMentionAtCursor,
@@ -188,6 +189,7 @@ export function useMentionState({ conversationId, textareaRef }: UseMentionState
     handleDropdownKeyDown,
     removeMentionFromText,
     stripMentions: (text: string) => stripMentionsFromText(text, attachedFiles),
+    expandMentions: (text: string) => expandMentions(text, attachedFiles),
     resetMention,
   };
 }

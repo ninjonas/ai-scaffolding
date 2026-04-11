@@ -29,6 +29,28 @@ function ToolCallsSection({ toolCalls }: { toolCalls: ToolCall[] }) {
   );
 }
 
+const MENTION_PATTERN = /@\[([^\]]+)\]/g;
+
+function renderMentions(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  const regex = new RegExp(MENTION_PATTERN);
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(
+      <span key={match.index} className="mention-pill mention-pill-static">
+        @{match[1]}
+      </span>,
+    );
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+}
+
 function UserMessageContent({ images, content }: { images?: string[]; content: string }) {
   return (
     <>
@@ -44,7 +66,7 @@ function UserMessageContent({ images, content }: { images?: string[]; content: s
           ))}
         </div>
       )}
-      <div className="message-content">{content}</div>
+      <div className="message-content">{renderMentions(content)}</div>
     </>
   );
 }
