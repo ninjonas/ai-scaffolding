@@ -3,7 +3,25 @@ import { useState, useRef, type KeyboardEvent } from 'react';
 interface ChatInputProps {
   onSend: (message: string, images: string[]) => void;
   disabled: boolean;
+  onAttachKnowledge?: () => void;
 }
+
+const BookIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+  </svg>
+);
 
 const PaperclipIcon = () => (
   <svg
@@ -37,7 +55,7 @@ const SendArrowIcon = () => (
   </svg>
 );
 
-export function ChatInput({ onSend, disabled }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, onAttachKnowledge }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +113,18 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         </div>
       )}
       <div className="chat-input-row">
+        {onAttachKnowledge && (
+          <button
+            className="attach-btn"
+            type="button"
+            onClick={onAttachKnowledge}
+            disabled={disabled}
+            title="Attach knowledge"
+            aria-label="Attach knowledge"
+          >
+            <BookIcon />
+          </button>
+        )}
         <button
           className="attach-btn"
           type="button"
