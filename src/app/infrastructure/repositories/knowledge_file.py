@@ -20,9 +20,7 @@ class SQLKnowledgeFileRepository:
         model = KnowledgeFileDataMapper.to_model(knowledge_file)
         await self._session.merge(model)
         duration_ms = round((time.monotonic() - start) * 1000, 3)
-        self._log.debug(
-            "repo_knowledge_save_done", file_id=knowledge_file.id, duration_ms=duration_ms
-        )
+        self._log.debug("repo_knowledge_save_done", file_id=knowledge_file.id, duration_ms=duration_ms)
 
     async def get_by_id(self, file_id: str) -> KnowledgeFile | None:
         self._log.debug("repo_knowledge_get_by_id", file_id=file_id)
@@ -70,6 +68,4 @@ class SQLKnowledgeFileRepository:
         if model:
             await self._session.delete(model)
         duration_ms = round((time.monotonic() - start) * 1000, 3)
-        self._log.debug(
-            "repo_knowledge_delete_done", file_id=file_id, deleted=deleted, duration_ms=duration_ms
-        )
+        self._log.debug("repo_knowledge_delete_done", file_id=file_id, deleted=deleted, duration_ms=duration_ms)

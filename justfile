@@ -122,3 +122,22 @@ setup-statusbar:
 # ── Fork ──────────────────────────────────────
 fork *args:
     just -f scripts/fork.just fork {{args}}
+
+# ── Database ──────────────────────────────────────
+db-reset:
+    just -f scripts/db.just reset
+
+db-tables:
+    just -f scripts/db.just tables
+
+db-counts:
+    just -f scripts/db.just counts
+
+db-chroma-stats:
+    just -f scripts/db.just chroma-stats
+
+db-sqlite *args:
+    just -f scripts/db.just sqlite {{args}}
+
+test-rag-e2e:
+    just -f scripts/db.just test-rag-e2e

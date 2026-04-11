@@ -5,6 +5,8 @@ It transforms LangChain message objects into plain Python dicts that services
 can work with, decoupling services from LangChain API changes.
 """
 
+from app.shared.field_keys import FIELD_KEY_CONTENT
+
 
 class AgentOutputParser:
     """Parses LangChain graph outputs → domain-neutral dicts.
@@ -28,7 +30,7 @@ class AgentOutputParser:
         """
         last_msg = result["messages"][-1]
         return {
-            "content": getattr(last_msg, "content", str(last_msg)),
+            FIELD_KEY_CONTENT: getattr(last_msg, "content", str(last_msg)),
             "tool_calls": getattr(last_msg, "tool_calls", []),
         }
 

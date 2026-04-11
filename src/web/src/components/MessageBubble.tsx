@@ -1,3 +1,5 @@
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { ToolCall } from '../api/chat';
 
 interface KnowledgeChip {
@@ -27,15 +29,29 @@ function ToolCallsSection({ toolCalls }: { toolCalls: ToolCall[] }) {
   );
 }
 
-function UserMessageContent({
-  images,
-  knowledgeFiles,
-  content,
-}: {
-  images?: string[];
-  knowledgeFiles?: KnowledgeChip[];
-  content: string;
-}) {
+const MENTION_PATTERN = /@\[([^\]]+)\]/g;
+
+function renderMentions(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  const regex = new RegExp(MENTION_PATTERN);
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(
+      <span key={match.index} className="mention-pill mention-pill-static">
+        @{match[1]}
+      </span>,
+    );
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+}
+
+function UserMessageContent({ images, content }: { images?: string[]; content: string }) {
   return (
     <>
       {images && images.length > 0 && (
@@ -50,28 +66,20 @@ function UserMessageContent({
           ))}
         </div>
       )}
-      {knowledgeFiles && knowledgeFiles.length > 0 && (
-        <div className="message-knowledge-chips">
-          {knowledgeFiles.map((kf) => (
-            <span key={kf.id} className="knowledge-chip knowledge-chip--static">
-              {kf.name}
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="message-content">{content}</div>
+      <div className="message-content">{renderMentions(content)}</div>
     </>
   );
 }
 
-export function MessageBubble({
-  role,
-  content,
-  toolCalls,
-  images,
-  knowledgeFiles,
-  loading,
-}: MessageBubbleProps) {
+function AssistantMessageContent({ content }: { content: string }) {
+  return (
+    <div className="message-content markdown-body">
+      <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+    </div>
+  );
+}
+
+export function MessageBubble({ role, content, toolCalls, images, loading }: MessageBubbleProps) {
   return (
     <div className={`message message-${role}${loading ? ' message-loading' : ''}`}>
       {role === 'assistant' && <div className="message-role">Assistant</div>}
@@ -81,8 +89,10 @@ export function MessageBubble({
           <span />
           <span />
         </div>
+      ) : role === 'assistant' ? (
+        <AssistantMessageContent content={content} />
       ) : (
-        <UserMessageContent images={images} knowledgeFiles={knowledgeFiles} content={content} />
+        <UserMessageContent images={images} content={content} />
       )}
       {!loading && toolCalls && toolCalls.length > 0 && <ToolCallsSection toolCalls={toolCalls} />}
     </div>

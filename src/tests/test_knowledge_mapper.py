@@ -12,6 +12,7 @@ from app.infrastructure.mappers.knowledge_file import (
 )
 from app.infrastructure.models.knowledge_file import KnowledgeFileModel
 from app.shared.field_keys import (
+    FIELD_KEY_CONTENT,
     FIELD_KEY_DESCRIPTION,
     FIELD_KEY_NAME,
 )
@@ -158,7 +159,7 @@ def test_to_catalog_entry_dto_has_scope():
 def test_to_catalog_entry_dto_has_no_content():
     entity = _make_entity()
     dto = KnowledgeFileApiMapper.to_catalog_entry_dto(entity)
-    assert not hasattr(dto, "content")
+    assert not hasattr(dto, FIELD_KEY_CONTENT)
 
 
 # -- to_catalog_dict --

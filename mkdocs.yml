@@ -25,8 +25,14 @@ nav:
     - 'Plan: `just fork` Scaffolding Clone': plans/004-fork-recipe.md
     - 'Plan: Knowledge Base (Project Context Files)': plans/005-knowledge-base.md
     - 'Plan: LLM-Powered Knowledge Frontmatter': plans/006-llm-knowledge-frontmatter.md
+    - 'Plan: ChromaDB RAG — Semantic Knowledge and Memory Search': plans/007-chromadb-rag.md
+    - 'Plan: Streaming LLM Responses': plans/008-streaming-responses.md
   - Functional Docs:
     - Agentic Architecture Review: functional/001-agentic-architecture-review.md
+    - Knowledge File Frontmatter: functional/002-knowledge-frontmatter.md
+  - Technical Docs:
+    - 'Agentic Architecture Review: Technical Analysis': technical/001-agentic-architecture-review.md
+    - Knowledge File Frontmatter: technical/002-knowledge-frontmatter.md
   - Guidelines:
     - Overview: guidelines/index.md
     - Agent Conventions: guidelines/agent-conventions.md

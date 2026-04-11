@@ -65,9 +65,7 @@ async def list_files(
         scope=query.scope,
         conversation_id=query.conversation_id,
     )
-    entities = await knowledge_service.list(
-        scope=query.scope, conversation_id=query.conversation_id
-    )
+    entities = await knowledge_service.list(scope=query.scope, conversation_id=query.conversation_id)
     log.info("knowledge_list_response", count=len(entities))
     return [KnowledgeFileApiMapper.to_catalog_entry_dto(e) for e in entities]
 
@@ -92,9 +90,7 @@ async def update_file(
     request: KnowledgeFileUpdateDTO,
     knowledge_service: KnowledgeServiceDep,
 ) -> KnowledgeFileResponseDTO:
-    log.info(
-        "knowledge_update_request", method="PUT", path=KNOWLEDGE_ROUTE_PREFIX, file_id=file_id
-    )
+    log.info("knowledge_update_request", method="PUT", path=KNOWLEDGE_ROUTE_PREFIX, file_id=file_id)
     entity = await knowledge_service.update(
         file_id=file_id,
         name=request.name,
@@ -112,8 +108,6 @@ async def delete_file(
     file_id: str,
     knowledge_service: KnowledgeServiceDep,
 ) -> None:
-    log.info(
-        "knowledge_delete_request", method="DELETE", path=KNOWLEDGE_ROUTE_PREFIX, file_id=file_id
-    )
+    log.info("knowledge_delete_request", method="DELETE", path=KNOWLEDGE_ROUTE_PREFIX, file_id=file_id)
     await knowledge_service.delete(file_id)
     log.info("knowledge_delete_response", file_id=file_id)

@@ -70,55 +70,6 @@ async def test_invoke_llm_returns_ai_message() -> None:
         "messages": [HumanMessage("hi")],
         "images": [],
         "skill_context": "",
-        "knowledge_catalog": "",
     }
     out = await invoke_llm(state, llm)
     assert out["messages"][-1].content == "hello"
-
-
-@pytest.mark.asyncio
-async def test_invoke_llm_appends_knowledge_catalog_to_system_prompt() -> None:
-    """knowledge_catalog must appear in the SystemMessage passed to the LLM."""
-    llm = FixedAIMessageModel(response=AIMessage(content="ok"))
-    catalog = "## Knowledge Base\n\n- **notes.md** (md, project): my notes"
-    state = {
-        "messages": [HumanMessage("question")],
-        "images": [],
-        "skill_context": "",
-        "knowledge_catalog": catalog,
-    }
-    await invoke_llm(state, llm)
-
-    system_content = llm.last_messages[0].content
-    assert catalog in system_content
-
-
-@pytest.mark.asyncio
-async def test_invoke_llm_skips_knowledge_catalog_when_empty() -> None:
-    """Empty knowledge_catalog must not add any extra section to the prompt."""
-    llm = FixedAIMessageModel(response=AIMessage(content="ok"))
-    state = {
-        "messages": [HumanMessage("question")],
-        "images": [],
-        "skill_context": "",
-        "knowledge_catalog": "",
-    }
-    await invoke_llm(state, llm)
-
-    system_content = llm.last_messages[0].content
-    assert "## Knowledge Base" not in system_content
-
-
-@pytest.mark.asyncio
-async def test_invoke_llm_skips_knowledge_catalog_when_absent() -> None:
-    """Missing knowledge_catalog key must not raise and must not inject catalog text."""
-    llm = FixedAIMessageModel(response=AIMessage(content="ok"))
-    state = {
-        "messages": [HumanMessage("question")],
-        "images": [],
-        "skill_context": "",
-    }
-    await invoke_llm(state, llm)
-
-    system_content = llm.last_messages[0].content
-    assert "## Knowledge Base" not in system_content

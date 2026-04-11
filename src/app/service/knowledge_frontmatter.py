@@ -21,9 +21,7 @@ TOP_KEYS_SEPARATOR = ", "
 def detect_file_type(filename: str) -> str:
     ext = Path(filename).suffix.lstrip(".").lower()
     if ext not in SUPPORTED_EXTENSIONS:
-        raise ValueError(
-            f"Unsupported file type: .{ext}. Accepted: .md, .txt, .json, .yml, or image files"
-        )
+        raise ValueError(f"Unsupported file type: .{ext}. Accepted: .md, .txt, .json, .yml, or image files")
     return ext
 
 

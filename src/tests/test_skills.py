@@ -126,7 +126,7 @@ def test_list_directory_returns_sorted_entries():
 def test_list_directory_includes_created_files():
     with tempfile.TemporaryDirectory(dir=Path.cwd()) as tmp_dir:
         tmp_path = Path(tmp_dir)
-        (tmp_path / "test.txt").write_text("content")
+        (tmp_path / "test.txt").write_text("hello")
         rel = tmp_path.relative_to(Path.cwd())
         entries = list_directory.invoke({"path": str(rel)})
     assert "test.txt" in entries

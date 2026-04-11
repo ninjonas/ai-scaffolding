@@ -7,17 +7,16 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { listKnowledgeFiles, type KnowledgeCatalogEntry } from '../api/knowledge';
-
-const MAX_DROPDOWN_ITEMS = 8;
-
-function fuzzyMatch(query: string, entry: KnowledgeCatalogEntry): boolean {
-  const q = query.toLowerCase();
-  return (
-    entry.name.toLowerCase().includes(q) ||
-    entry.description.toLowerCase().includes(q) ||
-    entry.tags.some((t) => t.toLowerCase().includes(q))
-  );
-}
+import {
+  MAX_DROPDOWN_ITEMS,
+  fuzzyMatch,
+  stripMentionsFromText,
+  expandMentions,
+  removeMentionByName,
+  collapseSpaces,
+  findMentionAtCursor,
+  shortenName,
+} from './mentionUtils';
 
 interface UseMentionStateOptions {
   conversationId?: string;
@@ -55,6 +54,10 @@ export function useMentionState({ conversationId, textareaRef }: UseMentionState
   }, [conversationId]);
 
   useEffect(() => {
+    setCatalog([]);
+  }, [conversationId]);
+
+  useEffect(() => {
     if (mentionQuery !== null && catalog.length === 0 && !catalogLoading) fetchCatalog();
   }, [mentionQuery, catalog.length, catalogLoading, fetchCatalog]);
 
@@ -77,17 +80,35 @@ export function useMentionState({ conversationId, textareaRef }: UseMentionState
   const selectFile = (entry: KnowledgeCatalogEntry, currentMessage: string) => {
     const before = currentMessage.slice(0, mentionStart - 1);
     const after = currentMessage.slice(mentionStart + (mentionQuery?.length ?? 0));
-    setMessage(before + after);
+    const mention = `@${shortenName(entry.name)}`;
+    const trailing = after.startsWith(' ') ? after : ` ${after}`;
+    setMessage(before + mention + trailing);
     closeMention();
     if (!attachedFiles.find((f) => f.id === entry.id)) {
       setAttachedFiles((prev) => [...prev, entry]);
     }
-    setTimeout(() => textareaRef.current?.focus(), 0);
+    setTimeout(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(before.length + mention.length + 1, before.length + mention.length + 1);
+    }, 0);
   };
 
   const handleTextChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
+    let val = e.target.value;
     const pos = e.target.selectionStart ?? 0;
+
+    const broken = attachedFiles.filter((f) => !val.includes(`@${shortenName(f.name)}`));
+    if (broken.length > 0) {
+      for (const f of broken) {
+        const escaped = shortenName(f.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        val = val.replace(new RegExp(`@${escaped}\\S*`, 'g'), '');
+      }
+      val = val.replace(/  +/g, ' ');
+      setAttachedFiles((prev) => prev.filter((f) => val.includes(`@${shortenName(f.name)}`)));
+    }
+
     setMessage(val);
     if (mentionQuery !== null) {
       const textSinceMention = val.slice(mentionStart, pos);
@@ -97,6 +118,23 @@ export function useMentionState({ conversationId, textareaRef }: UseMentionState
       const lastAt = val.lastIndexOf('@', pos - 1);
       if (lastAt !== -1 && lastAt === pos - 1) openMention(pos);
     }
+  };
+
+  const handleMentionKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): boolean => {
+    if (e.key !== 'Backspace' && e.key !== 'Delete') return false;
+    if (attachedFiles.length === 0) return false;
+    const ta = textareaRef.current;
+    if (!ta || ta.selectionStart !== ta.selectionEnd) return false;
+    const dir = e.key === 'Backspace' ? 'backspace' : 'delete';
+    const hit = findMentionAtCursor(ta.selectionStart, message, attachedFiles, dir);
+    if (!hit) return false;
+    e.preventDefault();
+    const before = message.slice(0, hit.start);
+    const after = message.slice(hit.end);
+    setMessage(collapseSpaces(before, after));
+    setAttachedFiles((prev) => prev.filter((x) => x.id !== hit.file.id));
+    setTimeout(() => ta.setSelectionRange(hit.start, hit.start), 0);
+    return true;
   };
 
   const handleDropdownKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): boolean => {
@@ -125,6 +163,10 @@ export function useMentionState({ conversationId, textareaRef }: UseMentionState
     return false;
   };
 
+  const removeMentionFromText = (name: string) => {
+    setMessage((prev) => removeMentionByName(prev, name));
+  };
+
   const resetMention = () => {
     setAttachedFiles([]);
     closeMention();
@@ -143,7 +185,11 @@ export function useMentionState({ conversationId, textareaRef }: UseMentionState
     closeMention,
     selectFile,
     handleTextChange,
+    handleMentionKeyDown,
     handleDropdownKeyDown,
+    removeMentionFromText,
+    stripMentions: (text: string) => stripMentionsFromText(text, attachedFiles),
+    expandMentions: (text: string) => expandMentions(text, attachedFiles),
     resetMention,
   };
 }

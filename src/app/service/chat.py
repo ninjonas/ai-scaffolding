@@ -5,12 +5,15 @@ import structlog
 
 from app.agents.orchestrator import AgentBroker
 from app.agents.tools.image import optimize_images_b64
-from app.agents.tools.knowledge import build_knowledge_catalog
 from app.domain.entities.conversation import Conversation
-from app.domain.entities.knowledge_file import SCOPE_CONVERSATION, SCOPE_PROJECT
+from app.domain.entities.knowledge_file import SCOPE_CONVERSATION, SCOPE_PROJECT, KnowledgeFile
 from app.domain.entities.message import Message, MessageRole
+from app.infrastructure.mappers.message_index import MessageIndexMapper
 from app.infrastructure.unit_of_work import SQLAlchemyUnitOfWork
+from app.infrastructure.vector.message_indexer import MessageIndexer
 from app.service.knowledge import KnowledgeService
+from app.service.knowledge_context import build_conversation_context, build_project_context
+from app.shared.field_keys import FIELD_KEY_CONTENT, FIELD_KEY_INTERRUPT, FIELD_KEY_INTERRUPT_TYPE
 
 log = structlog.get_logger()
 
@@ -21,10 +24,12 @@ class ChatService:
         broker: AgentBroker,
         unit_of_work: SQLAlchemyUnitOfWork,
         knowledge_service: KnowledgeService,
+        message_indexer: MessageIndexer | None = None,
     ) -> None:
         self._broker = broker
         self._uow = unit_of_work
         self._knowledge_service = knowledge_service
+        self._message_indexer = message_indexer
 
     async def send_message(
         self,
@@ -33,7 +38,7 @@ class ChatService:
         images: list[str] | None = None,
         image_filenames: list[str] | None = None,
         knowledge_file_ids: list[str] | None = None,
-    ) -> Message:
+    ) -> Message | dict:
         log.info(
             "send_message_start",
             conversation_id=conversation_id,
@@ -48,66 +53,59 @@ class ChatService:
         async with self._uow as uow:
             conversation = await self._get_or_create(uow, conversation_id)
 
-            project_catalog = await self._knowledge_service.get_catalog(scope=SCOPE_PROJECT)
-            conversation_catalog = await self._knowledge_service.get_catalog(
-                scope=SCOPE_CONVERSATION,
-                conversation_id=conversation.id,
-            )
-            catalog_entries = project_catalog + conversation_catalog
-            knowledge_catalog = build_knowledge_catalog(catalog_entries)
-            log.info(
-                "knowledge_catalog_built",
-                conversation_id=conversation.id,
-                project_count=len(project_catalog),
-                conversation_count=len(conversation_catalog),
-                catalog_length=len(knowledge_catalog),
-            )
-
             user_message = Message(
                 content=content,
                 role=MessageRole.USER,
                 images=optimized,
             )
             conversation.add_message(user_message)
-
-            response = await self._broker.chat_response(
-                content,
-                optimized,
-                knowledge_catalog=knowledge_catalog,
-                conversation_id=conversation.id,
-                message_count=len(conversation.messages),
-            )
-
-            raw_content = response["content"]
-            if not raw_content:
-                log.warning("chat_empty_response", conversation_id=conversation.id)
-                raw_content = "Sorry, I didn't get a response. Please try again."
-            assistant_message = Message(
-                content=raw_content,
-                role=MessageRole.ASSISTANT,
-                tool_calls=response.get("tool_calls", []),
-            )
-            conversation.add_message(assistant_message)
-
             await uow.conversations.save(conversation)
             await uow.commit()
 
-        uploaded_files = []
-        filenames = image_filenames or []
-        for i, img_b64 in enumerate(user_message.images):
-            filename = filenames[i] if i < len(filenames) else f"image_{i + 1}.jpg"
-            kf = await self._knowledge_service.upload(
-                filename=filename,
-                content=img_b64,
+        uploaded_files = await self._index_images(
+            user_message.images,
+            image_filenames,
+            conversation.id,
+        )
+        await asyncio.gather(*[self._knowledge_service.enrich_metadata(kf.id) for kf in uploaded_files])
+
+        project_files, conversation_files = await asyncio.gather(
+            self._knowledge_service.list(scope=SCOPE_PROJECT),
+            self._knowledge_service.list(
                 scope=SCOPE_CONVERSATION,
                 conversation_id=conversation.id,
-            )
-            uploaded_files.append(kf)
+            ),
+        )
+        knowledge_context = build_project_context(project_files) + build_conversation_context(conversation_files)
+        log.info(
+            "knowledge_context_attached",
+            conversation_id=conversation.id,
+            project_file_count=len(project_files),
+            conversation_file_count=len(conversation_files),
+        )
 
-        _enrich_tasks = [
-            asyncio.create_task(self._knowledge_service.enrich_metadata(kf.id))
-            for kf in uploaded_files
-        ]
+        response = await self._broker.chat_response(
+            content,
+            optimized,
+            conversation_id=conversation.id,
+            knowledge_context=knowledge_context,
+            message_count=len(conversation.messages),
+        )
+
+        if response.get(FIELD_KEY_INTERRUPT):
+            log.info(
+                "send_message_interrupted",
+                conversation_id=conversation.id,
+                interrupt_type=response[FIELD_KEY_INTERRUPT].get(FIELD_KEY_INTERRUPT_TYPE),
+            )
+            response["conversation_id"] = conversation.id
+            return response
+
+        assistant_message = await self._persist_assistant_reply(conversation, response)
+
+        if self._message_indexer:
+            await self._message_indexer.index(**MessageIndexMapper.to_index_params(user_message))
+            await self._message_indexer.index(**MessageIndexMapper.to_index_params(assistant_message))
 
         duration = time.monotonic() - start  # timing: operation-level
         log.info(
@@ -118,7 +116,77 @@ class ChatService:
         )
         return assistant_message
 
-    async def _get_or_create(self, uow, conversation_id: str | None) -> Conversation:
+    async def resume(self, conversation_id: str, approved: bool) -> dict:
+        """Resume a paused conversation thread.
+
+        Args:
+            conversation_id: The thread to resume.
+            approved: Whether the pending action is approved.
+
+        Returns:
+            Dict with 'content' and 'tool_calls' keys from the agent.
+        """
+        log.info("resume_start", conversation_id=conversation_id, approved=approved)
+        result = await self._broker.resume(conversation_id, approved)
+
+        async with self._uow as uow:
+            conversation = await uow.conversations.get_by_id(conversation_id)
+
+        if conversation:
+            assistant_message = await self._persist_assistant_reply(conversation, result)
+            if self._message_indexer:
+                await self._message_indexer.index(**MessageIndexMapper.to_index_params(assistant_message))
+
+        log.info("resume_complete", conversation_id=conversation_id)
+        return result
+
+    async def _persist_assistant_reply(
+        self,
+        conversation: Conversation,
+        response: dict,
+    ) -> Message:
+        raw_content = response.get(FIELD_KEY_CONTENT, "")
+        if not raw_content:
+            log.warning("chat_empty_response", conversation_id=conversation.id)
+            raw_content = "Sorry, I didn't get a response. Please try again."
+        assistant_message = Message(
+            content=raw_content,
+            role=MessageRole.ASSISTANT,
+            tool_calls=response.get("tool_calls", []),
+        )
+        async with self._uow as uow:
+            conversation.add_message(assistant_message)
+            await uow.conversations.save(conversation)
+            await uow.commit()
+        return assistant_message
+
+    async def _index_images(
+        self,
+        images: list[str],
+        filenames: list[str] | None,
+        conversation_id: str,
+    ) -> list[KnowledgeFile]:
+        """Upload images to knowledge base before the agent sees them."""
+        if not images:
+            return []
+        names = filenames or []
+        uploaded = []
+        for i, img_b64 in enumerate(images):
+            filename = names[i] if i < len(names) else f"image_{i + 1}.jpg"
+            kf = await self._knowledge_service.upload(
+                filename=filename,
+                content=img_b64,
+                scope=SCOPE_CONVERSATION,
+                conversation_id=conversation_id,
+            )
+            uploaded.append(kf)
+        return uploaded
+
+    async def _get_or_create(
+        self,
+        uow,
+        conversation_id: str | None,
+    ) -> Conversation:
         log.debug("get_or_create_conversation", conversation_id=conversation_id)
         if conversation_id:
             convo = await uow.conversations.get_by_id(conversation_id)

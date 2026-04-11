@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { sendMessage, type ToolCall } from '../api/chat';
+import {
+  sendMessage,
+  resumeConversation,
+  type ChatResponse,
+  type ToolCall,
+  type MemoryConfirmInterrupt,
+} from '../api/chat';
 import type { AttachedImage } from './ChatInput';
 
 interface KnowledgeChip {
@@ -8,11 +14,12 @@ interface KnowledgeChip {
 }
 
 export interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'memory_confirm';
   content: string;
   toolCalls?: ToolCall[];
   images?: string[];
   knowledgeFiles?: KnowledgeChip[];
+  interrupt?: MemoryConfirmInterrupt;
 }
 
 interface UseChatSendResult {
@@ -26,7 +33,15 @@ interface UseChatSendResult {
     images: AttachedImage[],
     knowledgeFiles: KnowledgeChip[],
   ) => Promise<void>;
+  handleResume: (approved: boolean) => Promise<void>;
   handleNewChat: () => void;
+}
+
+function toAssistantMessage(response: ChatResponse): ChatMessage {
+  if (response.interrupt?.type === 'memory_confirm') {
+    return { role: 'memory_confirm', content: '', interrupt: response.interrupt };
+  }
+  return { role: 'assistant', content: response.message, toolCalls: response.toolCalls };
 }
 
 export function useChatSend(): UseChatSendResult {
@@ -51,7 +66,6 @@ export function useChatSend(): UseChatSendResult {
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
     setError(undefined);
-
     try {
       const response = await sendMessage({
         message: content,
@@ -60,16 +74,24 @@ export function useChatSend(): UseChatSendResult {
         imageFilenames: images.length > 0 ? images.map((img) => img.filename) : undefined,
         knowledgeFileIds: knowledgeFiles.length > 0 ? knowledgeFiles.map((f) => f.id) : undefined,
       });
-
       setConversationId(response.conversationId);
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: response.message, toolCalls: response.toolCalls },
-      ]);
+      setMessages((prev) => [...prev, toAssistantMessage(response)]);
+      if (images.length > 0) setKnowledgeRefreshKey((k) => k + 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      if (images.length > 0) {
-        setKnowledgeRefreshKey((k) => k + 1);
-      }
+  const handleResume = async (approved: boolean) => {
+    if (!conversationId) return;
+    setMessages((prev) => prev.filter((m) => m.role !== 'memory_confirm'));
+    setLoading(true);
+    setError(undefined);
+    try {
+      const response = await resumeConversation(conversationId, approved);
+      setMessages((prev) => [...prev, toAssistantMessage(response)]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -91,6 +113,7 @@ export function useChatSend(): UseChatSendResult {
     error,
     knowledgeRefreshKey,
     handleSend,
+    handleResume,
     handleNewChat,
   };
 }

@@ -2,6 +2,7 @@ import time
 
 import structlog
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langgraph.types import interrupt
 
 from app.agents.chatbot.state import ChatbotState
 from app.agents.constants import (
@@ -55,21 +56,13 @@ async def invoke_llm(state: ChatbotState, llm, extra_tools: list | None = None) 
     if state.get("skill_context"):
         system_prompt += f"\n\n## Loaded Skill Context\n\n{state['skill_context']}"
 
-    knowledge_catalog = state.get("knowledge_catalog") or ""
-    if knowledge_catalog:
-        system_prompt += f"\n\n{knowledge_catalog}"
-        log.info("chatbot_knowledge_catalog_injected", length=len(knowledge_catalog))
-
     chat_messages = list(state["messages"])
     images = state.get("images") or []
-    if images:
+    is_first_pass = not any(isinstance(m, AIMessage) for m in chat_messages)
+    if images and is_first_pass:
         log.info("chatbot_attaching_images", count=len(images))
         last_human = next(
-            (
-                i
-                for i in range(len(chat_messages) - 1, -1, -1)
-                if isinstance(chat_messages[i], HumanMessage)
-            ),
+            (i for i in range(len(chat_messages) - 1, -1, -1) if isinstance(chat_messages[i], HumanMessage)),
             None,
         )
         if last_human is not None:
@@ -105,3 +98,24 @@ def should_continue(state: ChatbotState) -> str:
         log.debug("chatbot_routing_to_tools", tool_count=len(last.tool_calls))
         return NODE_TOOLS
     return NODE_END
+
+
+async def await_memory_confirm(state: ChatbotState) -> dict:
+    results = state.get("memory_results")
+    if not results:
+        return {}
+    confirmed = interrupt(
+        {
+            "type": "memory_confirm",
+            "results": results,
+            "prompt": "I found relevant context from past conversations. Use it?",
+        }
+    )
+    if confirmed:
+        context = "\n\n".join(f"[{r['conversation_id']} | {r['created_at']}]\n{r['excerpt']}" for r in results)
+        return {
+            "messages": [SystemMessage(content=f"## Past Context\n\n{context}")],
+            "memory_results": [],
+            "memory_confirmed": True,
+        }
+    return {"memory_results": [], "memory_confirmed": False}
