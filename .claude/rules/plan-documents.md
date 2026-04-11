@@ -4,41 +4,39 @@ Plans live in `docs/plans/` with numeric prefix: `001-name.md`, `002-name.md`.
 
 ### Required sections
 
-```markdown
-# Plan: <Title>
+1. **Header**: Title, Status, Date, Author
+2. **Overview**: One paragraph, what and why
+3. **Decisions Made**: Table of choices made during planning
+4. **Target Folder Structure**: Tree view of new/changed files
+5. **Implementation Phases**: Numbered phases with status and checkbox tasks
+6. **Agent Execution Strategy**: How a supervisor agent should execute this plan
+7. **Changelog**: Dated log of all document changes
+8. **Dependencies**: Additions to pyproject.toml / package.json
+9. **Open Questions / Resolved Questions**
 
-**Status**: Draft | Approved | In Progress | Done
-**Date**: YYYY-MM-DD
-**Author**: <who>
+### Phase status
 
-## Overview
-One paragraph — what and why.
+Every phase heading includes a status: `Not Started | In Progress | Done`.
+Format: `### Phase 1: Foundation \`Not Started\``
 
-## Decisions Made
-| # | Decision | Choice |
-Table of choices made during planning (captures the Q&A).
+### Task checkboxes
 
-## Target Folder Structure
-Tree view of new/changed files.
+Every task within a phase uses checkbox syntax: `- [ ]` or `- [x]`.
 
-## Implementation Phases
-Numbered phases, each with numbered steps.
-Keep phases small enough to review independently.
+### Agent Execution Strategy
 
-## <Pattern/Architecture sections>
-Code examples showing key patterns (DTOs, mappers, etc.).
-Only include patterns that are new or non-obvious.
+Documents how a supervisor orchestrates this plan: parallelism map, sequencing constraints, per-phase agent instructions.
 
-## Dependencies
-What gets added to pyproject.toml / package.json.
+### Changelog
 
-## Open Questions / Resolved Questions
-Track what's undecided and what got resolved.
-```
+Records every document change: `| Date | Author | Change |` table.
+Entry required for every edit after initial creation.
 
 ### Rules
 
-- The decisions table is mandatory — it captures context that code alone cannot
-- Phases should map to reviewable units of work (one PR per phase is ideal)
-- Code examples in plans are illustrative, not copy-paste — the implementation may differ
-- Update the status field as work progresses
+- The decisions table is mandatory
+- Phases map to reviewable units of work (one PR per phase)
+- Code examples are illustrative, not copy-paste
+- Update phase statuses and task checkboxes as work progresses
+
+See skill: plan-documents

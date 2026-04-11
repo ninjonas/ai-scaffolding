@@ -155,112 +155,83 @@ src/app/
 
 ## Implementation Phases
 
-### Phase 1: Foundation (infrastructure + shared layer)
+### Phase 1: Foundation (infrastructure + shared layer) `Done`
 
-1. **Add Python dependencies** to `pyproject.toml`
-   - `langgraph`, `langchain-core`, `langchain-openai`
-   - `pydantic-settings`, `structlog`, `Pillow`
-   - `sqlalchemy[asyncio]>=2`, `aiosqlite` (async SQLite)
-   - Dev: `langgraph-cli` (optional)
-1. **Create `src/app/shared/`**
-   - `config.py` — Settings class with LLM provider config, env vars
-   - `llm.py` — `create_llm(settings)` factory returning ChatOpenAI
-   - `logging.py` — structlog config (JSON file + human stdout)
-   - `di.py` — simple DI container
-1. **Update `.env.example`** with LLM config vars
-1. **Create Claude rules** for new patterns (logging enforcement, document locations, agent conventions)
+- [x] Add Python dependencies to `pyproject.toml`: `langgraph`, `langchain-core`, `langchain-openai`, `pydantic-settings`, `structlog`, `Pillow`, `sqlalchemy[asyncio]>=2`, `aiosqlite`
+- [x] Create `src/app/shared/`: `config.py` (Settings), `llm.py` (factory), `logging.py` (structlog), `di.py` (DI container)
+- [x] Update `.env.example` with LLM config vars
+- [x] Create Claude rules for new patterns (logging enforcement, document locations, agent conventions)
 
-### Phase 1b: Persistence layer (SQLAlchemy + PofEAA)
+### Phase 1b: Persistence layer (SQLAlchemy + PofEAA) `Done`
 
-5. **Create `src/app/infrastructure/`**
-   - `database.py` — async SQLAlchemy engine + session factory (SQLite at `data/app.db`)
-   - `models/conversation.py` — `ConversationModel` ORM model
-   - `models/message.py` — `MessageModel` ORM model
-1. **Create domain repository interfaces** in `src/app/domain/repositories/`
-   - `conversation.py` — `ConversationRepository` protocol (abstract)
-1. **Create infrastructure implementations**
-   - `repositories/conversation.py` — `SQLConversationRepository` (concrete)
-   - `mappers/conversation.py` — `ConversationDataMapper` (ORM ↔ domain)
-   - `unit_of_work.py` — `SQLAlchemyUnitOfWork` wrapping session/transaction
-1. **Wire DI** — register repository + unit of work in DI container
+- [x] Create `src/app/infrastructure/`: `database.py`, `models/conversation.py`, `models/message.py`
+- [x] Create domain repository interfaces in `src/app/domain/repositories/conversation.py`
+- [x] Create infrastructure implementations: `repositories/conversation.py`, `mappers/conversation.py`, `unit_of_work.py`
+- [x] Wire DI: register repository + unit of work in DI container
 
-### Phase 2: Agent system (prompts, skills, rules)
+### Phase 2: Agent system (prompts, skills, rules) `Done`
 
-5. **Create prompt templates** in `src/app/agents/prompts/`
-   - `system.md` — shared system prompt
-   - `output_format.md` — structured output template
-   - Agent-specific persona files
-1. **Create skill loader** in `src/app/agents/skills/loader.py`
-   - Scan skill directories, build catalog
-   - `load_skill(name)` and `read_skill_file(name, filename)` as LangChain tools
-1. **Create starter skills** with `SKILL.md` + `tools.py`
-   - `analyze_image/` — image description using vision model
-   - `web_search/` — web search tool
-   - `file_ops/` — basic file operations
-   - `calculator/` — math evaluation
-1. **Create agent rules** in `src/app/agents/rules/`
-   - `safety.md` — guardrails
-   - `tone.md` — communication style
+- [x] Create prompt templates in `src/app/agents/prompts/`: `system.md`, `output_format.md`, agent-specific persona files
+- [x] Create skill loader in `src/app/agents/skills/loader.py`
+- [x] Create starter skills with `SKILL.md` + `tools.py`: `analyze_image/`, `web_search/`, `file_ops/`, `calculator/`
+- [x] Create agent rules in `src/app/agents/rules/`: `safety.md`, `tone.md`
 
-### Phase 3: Agents (chatbot, researcher, supervisor)
+### Phase 3: Agents (chatbot, researcher, supervisor) `Done`
 
-9. **Create chatbot agent** in `src/app/agents/chatbot/`
-   - `state.py` — ChatState with messages, images, skill context
-   - `nodes.py` — agent node, tool node, skill loading node
-   - `graph.py` — compiled StateGraph
-1. **Create researcher subagent** in `src/app/agents/researcher/`
-   - Web search focused, returns structured findings
-1. **Create supervisor** in `src/app/agents/supervisor/`
-   - Wires chatbot + researcher
-   - Routes based on task type (image analysis → chatbot, research → researcher)
+- [x] Create chatbot agent in `src/app/agents/chatbot/`: `state.py`, `nodes.py`, `graph.py`
+- [x] Create researcher subagent in `src/app/agents/researcher/`
+- [x] Create supervisor in `src/app/agents/supervisor/`: wires chatbot + researcher, routes by task type
 
-### Phase 4: Domain + Service layer
+### Phase 4: Domain + Service layer `Done`
 
-12. **Create domain entities** in `src/app/domain/`
-    - `Message`, `Conversation`, `OptimizedImage`
-01. **Create `ChatService`** in `src/app/service/chat.py`
-    - `send_message()` — invoke agent, return response
-    - `stream_message()` — invoke agent, yield SSE chunks
-    - Handles image optimization before passing to agent
-    - Verbose logging at every step
+- [x] Create domain entities in `src/app/domain/`: `Message`, `Conversation`, `OptimizedImage`
+- [x] Create `ChatService` in `src/app/service/chat.py`: `send_message()`, `stream_message()`, image optimization, verbose logging
 
-### Phase 5: API layer
+### Phase 5: API layer `Done`
 
-14. **Create DTOs** in `src/app/api/dto/`
-    - `ChatRequestDTO` (message, images, conversation_id)
-    - `ChatResponseDTO` (message, metadata, tool_calls)
-    - Pydantic models with `alias_generator = to_camel` for JSON camelCase
-01. **Create data mappers** in `src/app/api/mappers/`
-    - `ChatMapper` — DTO ↔ domain entity conversion
-01. **Create routes** in `src/app/api/routes/`
-    - `POST /api/chat` — SSE streaming response
-    - `WS /api/chat/ws` — WebSocket for real-time chat
-    - `GET /health` — existing, moved to routes module
-01. **Update `main.py`** — mount API router, configure CORS, init logging
-01. **Generate TypeScript types** from OpenAPI spec
-    - Add `openapi-typescript` to web devDependencies
-    - Add just recipe: `just gen-types` → generates `src/web/src/api/types.ts`
+- [x] Create DTOs in `src/app/api/dto/`: `ChatRequestDTO`, `ChatResponseDTO` with `alias_generator = to_camel`
+- [x] Create data mappers in `src/app/api/mappers/`: `ChatMapper`
+- [x] Create routes in `src/app/api/routes/`: `POST /api/chat`, `WS /api/chat/ws`, `GET /health`
+- [x] Update `main.py`: mount API router, configure CORS, init logging
+- [x] Generate TypeScript types from OpenAPI spec, add `just gen-types` recipe
 
-### Phase 6: Frontend chat UI
+### Phase 6: Frontend chat UI `Done`
 
-19. **Create chat components** in `src/web/src/`
-    - Chat interface with message list, input, image upload
-    - Image preview with client-side resize before upload
-    - Streaming response display
-    - Tool call visualization
+- [x] Create chat components in `src/web/src/`: message list, input, image upload, streaming display, tool call visualization
 
-### Phase 7: Just recipes + Claude skills
+### Phase 7: Just recipes + Claude skills `Done`
 
-20. **Add just recipes** for new workflows
-    - `just gen-types` — generate TS types from OpenAPI
-    - Update `just dev-start` if needed
-01. **Create/update Claude skills**
-    - Skill for adding new agents
-    - Skill for adding new skills
-    - Skill for adding new tools
-01. **Update Claude rules**
-    - Agent development conventions
-    - Logging enforcement rule
+- [x] Add just recipes: `just gen-types`, update `just dev-start`
+- [x] Create/update Claude skills for adding new agents, skills, tools
+- [x] Update Claude rules: agent development conventions, logging enforcement
+
+## Agent Execution Strategy
+
+### Parallelism map
+
+| Phase | Depends on | Agent type | Notes                            |
+| ----- | ---------- | ---------- | -------------------------------- |
+| 1     | None       | backend    | Foundation, must complete first  |
+| 1b    | Phase 1    | backend    | Persistence, needs shared layer  |
+| 2     | Phase 1    | backend    | Can run parallel with Phase 1b   |
+| 3     | 1, 1b, 2   | backend    | Needs all foundation layers      |
+| 4     | Phase 1    | backend    | Can run parallel with Phases 2-3 |
+| 5     | 3, 4       | backend    | Needs agents + service layer     |
+| 6     | Phase 5    | frontend   | Needs API endpoints              |
+| 7     | Phase 5    | fullstack  | Can run parallel with Phase 6    |
+
+### Sequencing constraints
+
+- Phase 1 is the critical path: everything depends on shared infrastructure.
+- Phases 1b, 2, and 4 can run in parallel after Phase 1 completes.
+- Phase 3 blocks on Phases 1b and 2 (agents need persistence and prompt/skill system).
+- Phases 6 and 7 can run in parallel after Phase 5 completes.
+
+### Agent instructions
+
+- **Backend agent (Phases 1-5)**: Follow PofEAA patterns (repository, unit of work, data mapper). Use DI for all dependencies. All LLM access through `shared/llm.py` factory. Verbose structlog logging at every layer.
+- **Frontend agent (Phase 6)**: Build React components consuming the REST/WS API. Client-side image resize before upload. Use auto-generated TypeScript types from OpenAPI.
+- **Fullstack agent (Phase 7)**: Wire just recipes delegating to `scripts/*.just`. Create Claude skills following `.claude/skills/` conventions.
 
 ## Persistence Architecture (PofEAA + DDD + SOLID)
 
@@ -452,3 +423,11 @@ dependencies = [
 - [x] **Conversation persistence**: SQLite + SQLAlchemy (full PofEAA: repository, unit of work, data mapper)
 - [x] **Search API**: Mock for now (no external API key needed)
 - [x] **WebSocket auth**: Simple token-based auth
+
+## Changelog
+
+| Date       | Author         | Change                                                                                                  |
+| ---------- | -------------- | ------------------------------------------------------------------------------------------------------- |
+| 2026-04-07 | Claude + Jonas | Initial draft                                                                                           |
+| 2026-04-07 | Claude + Jonas | Completed all phases                                                                                    |
+| 2026-04-10 | Claude         | Migrated to new plan format: added phase statuses, task checkboxes, agent execution strategy, changelog |

@@ -1,6 +1,6 @@
 # Plan: `just fork` Scaffolding Clone
 
-**Status**: In Progress
+**Status**: Done
 **Date**: 2026-04-08
 **Author**: Jonas Avellana
 
@@ -34,24 +34,45 @@ Contributors often bootstrap a new product repo from this template without carry
 
 ## Implementation Phases
 
-### Phase 1: Python core for copy, replacement, and safety
+### Phase 1: Python core for copy, replacement, and safety `Done`
 
-1. Add `scripts/lib/fork.py` with argparse: optional `--fork-name`, `--source`, `--dest-parent` defaulting to parent of cwd, dry-run flag if useful for tests, and `--yes` to skip interactive confirm when automation needs it.
-1. Implement filtered directory copy that recreates the tree under `../fork-name` while skipping `.git`, `tmp/`, `logs/`, `__pycache__/`, `.venv`, and `node_modules` at any depth.
-1. Implement case-preserving replacement over the allowlisted paths: `README.md`, `docs/index.md`, `mkdocs.yml`, `docs/plans/001-langgraph-introduction.md`, `src/web/src/components/Chat.tsx`, `src/web/src/App.test.tsx`, `src/app/main.py`, and every `.md` under `.claude/agents/`.
-1. Add small pure functions for case mapping (title, lower, upper) plus tests that lock `Chat.tsx` and `App.test.tsx` strings together.
+- [x] Add `scripts/lib/fork.py` with argparse: optional `--fork-name`, `--source`, `--dest-parent` defaulting to parent of cwd, dry-run flag if useful for tests, and `--yes` to skip interactive confirm when automation needs it.
+- [x] Implement filtered directory copy that recreates the tree under `../fork-name` while skipping `.git`, `tmp/`, `logs/`, `__pycache__/`, `.venv`, and `node_modules` at any depth.
+- [x] Implement case-preserving replacement over the allowlisted paths: `README.md`, `docs/index.md`, `mkdocs.yml`, `docs/plans/001-langgraph-introduction.md`, `src/web/src/components/Chat.tsx`, `src/web/src/App.test.tsx`, `src/app/main.py`, and every `.md` under `.claude/agents/`.
+- [x] Add small pure functions for case mapping (title, lower, upper) plus tests that lock `Chat.tsx` and `App.test.tsx` strings together.
 
-### Phase 2: Git init and GitHub CLI integration
+### Phase 2: Git init and GitHub CLI integration `Done`
 
-1. After copy and replacement, run `git init` in the destination, create initial commit with a neutral message (for example `chore: initial import from scaffolding template`), and set `origin` only when the user accepts the `gh` prompt.
-1. Detect `gh` via `shutil.which`; if present, after success prompt: whether to create a GHE repository for the fork name, then `gh repo create` with flags we document (private default unless policy says public), add remote, and `git push -u origin HEAD`.
-1. If `gh` is absent or the user declines, print the exact `cd`, `git remote add`, and `gh repo create` commands they can run later.
+- [x] After copy and replacement, run `git init` in the destination, create initial commit with a neutral message (for example `chore: initial import from scaffolding template`), and set `origin` only when the user accepts the `gh` prompt.
+- [x] Detect `gh` via `shutil.which`; if present, after success prompt: whether to create a GHE repository for the fork name, then `gh repo create` with flags we document (private default unless policy says public), add remote, and `git push -u origin HEAD`.
+- [x] If `gh` is absent or the user declines, print the exact `cd`, `git remote add`, and `gh repo create` commands they can run later.
 
-### Phase 3: Just recipes and contributor docs
+### Phase 3: Just recipes and contributor docs `Done`
 
-1. Add `scripts/fork.just` with a `fork` recipe that passes through argv to `uv run python scripts/lib/fork.py`.
-1. Wire `fork` from the root `justfile` with a one-line `mod` include or equivalent delegate consistent with existing recipes.
-1. Add a short paragraph to `README.md` (or setup doc if we keep README minimal) describing `just fork` and the sibling directory convention without duplicating this plan.
+- [x] Add `scripts/fork.just` with a `fork` recipe that passes through argv to `uv run python scripts/lib/fork.py`.
+- [x] Wire `fork` from the root `justfile` with a one-line `mod` include or equivalent delegate consistent with existing recipes.
+- [x] Add a short paragraph to `README.md` (or setup doc if we keep README minimal) describing `just fork` and the sibling directory convention without duplicating this plan.
+
+## Agent Execution Strategy
+
+### Parallelism map
+
+| Phase | Depends on | Agent type | Notes                         |
+| ----- | ---------- | ---------- | ----------------------------- |
+| 1     | None       | backend    | Pure Python, no external deps |
+| 2     | Phase 1    | backend    | Needs fork.py working first   |
+| 3     | Phase 1    | fullstack  | Can run parallel with Phase 2 |
+
+### Sequencing constraints
+
+- Phase 1 is the critical path: both Phase 2 and Phase 3 need `fork.py` to exist.
+- Phases 2 and 3 can run in parallel after Phase 1 completes.
+
+### Agent instructions
+
+- **Backend agent (Phase 1)**: Build `scripts/lib/fork.py` using stdlib only (no new deps). Implement filtered copy, case-preserving replacement over allowlisted paths, and argparse CLI. Write tests for case mapping functions.
+- **Backend agent (Phase 2)**: Add git init + `gh` CLI integration to `fork.py`. Use `shutil.which` for detection. Print manual commands as fallback.
+- **Fullstack agent (Phase 3)**: Create `scripts/fork.just` and wire into root justfile following existing delegation pattern. Update docs.
 
 ## Dependencies
 
@@ -60,6 +81,14 @@ Runtime: Python 3 (already available via `uv`), standard library preferred insid
 ## Open Questions / Resolved Questions
 
 Resolved: Replacement stays allowlisted rather than scanning the whole tree so binary assets and lockfiles stay untouched. Open: Exact `gh repo create` flags for org-owned GHE repos (org slug, visibility, default branch) should match internal runbooks before Phase 2 ships. Open: Whether plan documents under `docs/plans/` themselves should be rewritten in forks or left as historical references.
+
+## Changelog
+
+| Date       | Author         | Change                                                                                                  |
+| ---------- | -------------- | ------------------------------------------------------------------------------------------------------- |
+| 2026-04-08 | Jonas Avellana | Initial draft                                                                                           |
+| 2026-04-10 | Claude         | Migrated to new plan format: added phase statuses, task checkboxes, agent execution strategy, changelog |
+| 2026-04-10 | Claude         | Verified all phases complete, updated statuses to Done                                                  |
 
 ```mermaid
 flowchart LR
