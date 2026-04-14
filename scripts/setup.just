@@ -73,32 +73,62 @@ claude-cli:
         echo "🤖 CLI installed."
     fi
 
-# Install custom Claude Code status bar into ~/.claude/settings.json
-claude-statusbar:
+# Wire .claude/status-line.sh as the Claude Code status bar
+# scope: project (default) → .claude/settings.json | user → ~/.claude/settings.json
+claude-statusbar scope='project':
     #!/bin/bash
     set -euo pipefail
     echo ""
-    echo "── Claude Code Status Bar ──"
-    SCRIPT_SRC="$(pwd)/.claude/status-line.sh"
-    SCRIPT_DEST="$HOME/.claude/status-line.sh"
-    SETTINGS="$HOME/.claude/settings.json"
+    echo "── Claude Code Status Bar (ccstatusline) ──"
+    if command -v ccstatusline &>/dev/null; then
+        echo "📊 ccstatusline already installed."
+    else
+        echo "📊 Installing ccstatusline..."
+        npm install -g ccstatusline --silent 2>/dev/null
+        echo "📊 ccstatusline installed."
+    fi
 
-    # Copy script and make executable
-    cp "$SCRIPT_SRC" "$SCRIPT_DEST"
-    chmod +x "$SCRIPT_DEST"
+    SCOPE="{{scope}}"
+    if [ "$SCOPE" != "project" ] && [ "$SCOPE" != "user" ]; then
+        echo "❌ Invalid scope '$SCOPE'. Use 'project' or 'user'."
+        exit 1
+    fi
 
-    # Ensure ~/.claude/settings.json exists
-    mkdir -p "$(dirname "$SETTINGS")"
+    echo "── Wiring Status Bar ($SCOPE) ──"
+
+    SCRIPT="$(pwd)/.claude/status-line.sh"
+    if [ ! -f "$SCRIPT" ]; then
+        echo "📊 No .claude/status-line.sh in this repo, skipping."
+        exit 0
+    fi
+    chmod +x "$SCRIPT"
+
+    if [ "$SCOPE" = "user" ]; then
+        SETTINGS="$HOME/.claude/settings.json"
+        mkdir -p "$HOME/.claude"
+    else
+        SETTINGS=".claude/settings.json"
+    fi
+
     [ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
 
-    # Check if already configured to this script
-    current=$(jq -r '.statusCommand // empty' "$SETTINGS")
-    if [ "$current" = "$SCRIPT_DEST" ]; then
-        echo "📊 Status bar already configured, skipping."
+    # project scope: use $CLAUDE_PROJECT_DIR so it resolves per-session to this project's script
+    # user scope: use absolute path so all sessions (including other projects) run this same script
+    if [ "$SCOPE" = "user" ]; then
+        CMD="$(pwd)/.claude/status-line.sh"
+        DISPLAY_CMD="$CMD"
+    else
+        CMD='$CLAUDE_PROJECT_DIR/.claude/status-line.sh'
+        DISPLAY_CMD='$CLAUDE_PROJECT_DIR/.claude/status-line.sh'
+    fi
+
+    current=$(jq -r '.statusLine.command // empty' "$SETTINGS" 2>/dev/null || echo "")
+    if [ "$current" = "$CMD" ]; then
+        echo "📊 Status bar already wired in $SETTINGS."
     else
         tmp=$(mktemp)
-        jq --arg cmd "$SCRIPT_DEST" '.statusCommand = $cmd' "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
-        echo "📊 Status bar installed → $SCRIPT_DEST"
+        jq --arg cmd "$CMD" '.statusLine = {type: "command", command: $cmd, padding: 0}' "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
+        echo "📊 Status bar wired in $SETTINGS (statusLine.command → $DISPLAY_CMD)"
     fi
 
 # Install Claude Code plugins from .claude/settings.json (skips already-installed)
